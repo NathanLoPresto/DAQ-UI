@@ -37,6 +37,8 @@ adc_pipe = ep(0xA1, [i for i in range(32)], 'po')
 
 adc_chan = 0
 
+f=FPGA()
+
 def set_bit(ep_bit, adc_chan = None):
     if adc_chan is None:
         mask = gen_mask(ep_bit.bits)
@@ -128,86 +130,21 @@ def adc_stream_mult(adc, swps = 4):
     
     cnt = 0
     st = bytearray(np.asarray(np.ones(0, np.uint8)))  
-    fpga.xem.UpdateTriggerOuts()
+    f.xem.UpdateTriggerOuts()
     
     while cnt<swps:
-        if (fpga.xem.IsTriggered(0x60, 0x01)):
+        if (f.xem.IsTriggered(0x60, 0x01)):
             s,e = adc.read_pipe_out()
             st += s 
             cnt = cnt + 1
             print(cnt)
-        fpga.xem.UpdateTriggerOuts()
+        f.xem.UpdateTriggerOuts()
 
     d = convert_data(st)
     plt.plot(d)
     plt.show()
     return d
 
-def trig():
-    fpga.xem.UpdateTriggerOuts()
-    if (fpga.xem.IsTriggered(0x60, 0x01)):
-        return True
-    else:
-        return False
-          
-if __name__ == "__main__":
-    print ('---FPGA ADC and DAC Controller---')
-    f = FPGA()
-    if (False == f.init_device()):
-        raise SystemExit
-    f.one_shot(1)
-
-    # reset PLL 
-    toggle_high(adc_pll_reset)
-    clear_bit(adc_reset, adc_chan = adc_chan)
-    # reset FIFO
-    toggle_high(adc_fifo_reset)
-    # enable ADC
-    set_bit(adc_reset, adc_chan = adc_chan)
-    set_bit(adc_en0, adc_chan = adc_chan)
-    
-    #Time between each trigger check and append
-    terval=200
-
-    #Initializing the start time of the program
-    start_time= time.time()
-    # Create figure for plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    xs = []
-    ys = []
-    
-    #functions for returning y value and x timestamp
-    def y():
-         a = get_status(f)
-         return (int)(bin(a))
-
-    def x():
-        return float((int((time.time()-start_time)*10))/10)
-    
-    # This function is called periodically from FuncAnimation
-    def animate(i, xs, ys):
-    
-        #if triggered, append x and y values
-        if trig():
-            xs.append(x())
-            ys.append(y())
-    
-        # Limits the x and y lists to 50 variables 
-        xs = xs[-50:]
-        ys = ys[-50:]
-    
-        # Draw x and y lists
-        ax.clear()
-        ax.plot(xs, ys)
-
-        # Format plot
-        plt.xticks(rotation=45, ha='right')
-        plt.subplots_adjust(bottom=0.30)
-        plt.title('The effect of time on adc values')
-        plt.ylabel('ADC output')
-        plt.xlabel('Time (seconds since start)')
-
-    # Set up plot to call animate() function periodically
-    ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), interval=terval)
-    plt.show()
+def y():
+    a = adc_stream_mult(f,swps=4)
+    return (int)(bin(a))
