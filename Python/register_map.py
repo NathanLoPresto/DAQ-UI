@@ -17,3 +17,9 @@ def ic_read (addr, datain):
   #data = dev.ReadFromPipeOut(addr, datain)
   #return data
   exit
+  
+#Example code using the univeral read function along with the IC Dict 
+'''
+dataout = whatever we need
+ic_write((ad5453['tx_register']), dataout) 
+'''
