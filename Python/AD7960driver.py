@@ -2,26 +2,20 @@
 """
 Created on Fri Apr  2 19:11:58 2021
 
-@author: Nathan LoPresto
+@author: Nathan LoPresto/Lucas Koerner
 """
 
-
-import sys
 from fpga import FPGA
 import numpy as np
 import matplotlib.pyplot as plt
-import time
-import pickle as pkl 
-from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
-import time
-from matplotlib import pyplot as plt
-import matplotlib.animation as animation
-'''
-TODO: why am I overriding the built-in bin in utils? 
-'''
+from drivers.utils import bin,twos_comp
+
 plt.ion()
 
+#TODO: DO I need any of this, any of the functions that I pulled out
+'''
 from collections import namedtuple
+
 ep = namedtuple('ep', 'addr bits type')
 adc_reset = ep(0x01, [8,9,10,11], 'wi')  # note this is active low 
 adc_en0 =   ep(0x01, [12,13,14,15], 'wi')
@@ -44,65 +38,11 @@ adc_pipe_rd_trig = ep(0x70, [3,4,5,6], 'to')
 adc_pipe = ep(0xA1, [i for i in range(32)], 'po') 
 
 adc_chan = 0
-
+'''
 f=FPGA()
 
-def set_bit(ep_bit, adc_chan = None):
-    if adc_chan is None:
-        mask = gen_mask(ep_bit.bits)
-    else:
-        mask = gen_mask(ep_bit.bits[adc_chan])    
-    f.xem.SetWireInValue(ep_bit.addr, mask, mask) # set
-    f.xem.UpdateWireIns()
 
-def clear_bit(ep_bit, adc_chan = None):
-    if adc_chan is None:
-        mask = gen_mask(ep_bit.bits)
-    else:
-        mask = gen_mask(ep_bit.bits[adc_chan])    
-    f.xem.SetWireInValue(ep_bit.addr, 0x0000, mask) # clear
-    f.xem.UpdateWireIns()
-
-def toggle_low(ep_bit, adc_chan = None):
-    if adc_chan is None:
-        mask = gen_mask(ep_bit.bits)
-    else:
-        mask = gen_mask(ep_bit.bits[adc_chan])    
-    f.xem.SetWireInValue(ep_bit.addr, 0x0000, mask) # toggle low 
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(ep_bit.addr, mask, mask)   # back high 
-    f.xem.UpdateWireIns()
-
-def toggle_high(ep_bit, adc_chan = None):
-    if adc_chan is None:
-        mask = gen_mask(ep_bit.bits)
-    else:
-        mask = gen_mask(ep_bit.bits[adc_chan])
-    f.xem.SetWireInValue(ep_bit.addr, mask, mask) # toggle high 
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(ep_bit.addr, 0x0000, mask)   # back low 
-    f.xem.UpdateWireIns()
-
-def get_status(fpga):
-
-    ''' 
-    adc_pll_lock =   ep(0x20, 8, 'wo')
-    adc_fifo_full =  ep(0x20, 9, 'wo')
-    adc_fifo_empty = ep(0x20, 10, 'wo')
-    pipe_out_rd_cnt = ep(0x20, [i+11 for i in range(10)], 'wo') # 10 bits 
-    '''
-    fpga.xem.UpdateWireOuts()
-    a = fpga.xem.GetWireOutValue(adc_pll_lock.addr) 
-    for s,n in [(adc_pll_lock, 'pll_lock'), 
-                (adc_fifo_full, 'fifo_full'),
-                (adc_fifo_empty, 'fifo_empty')]:
-        v = test_bit(a, s.bits)
-        print('Status {} = {} \n --------- \n'.format(n, v))
-
-    fifo_cnt = (a >> pipe_out_rd_cnt.bits[0]) &  2**(len(pipe_out_rd_cnt.bits)-1)
-    print('Data count in ADC FIFO = {}'.format(fifo_cnt))
-    return a
-
+#needed for adc_stream_mult()
 def convert_data(buf):
     bits = 16 # for AD7961 bits=18 for AD7960
     d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
@@ -116,24 +56,7 @@ def convert_data(buf):
     d_twos = twos_comp(d2, bits)
     return d_twos
 
-
-def setup(fpga, enable_bits=13, pipe_offset = 1):
-    # fpga.reset()
-    fpga.reset_adc()
-    fpga.adc_enable(enable_bits)
-    time.sleep(0.02)
-    fpga.adc_active()
-    time.sleep(0.01)
-    st = fpga.get_status()
-    if not(test_bit(st, 2 + 8*pipe_offset)):
-        print('ADC pipe out is full \n We can read data')
-        # b,cnt = adc.ReadPipeOut(pipe_offset) 
-        # d = np.frombuffer(d, dtype=np.uint32)
-        # d_twos = twos_comp(d, 18)        
-
-    # return d, d_twos, st
-    return st
-
+#returns the data needed for y()
 def adc_stream_mult(adc, swps = 4):
     
     cnt = 0
@@ -153,6 +76,8 @@ def adc_stream_mult(adc, swps = 4):
     plt.show()
     return d
 
+#function imported into graphadc for graphing
 def y():
     a = adc_stream_mult(f,swps=4)
     return (int)(bin(a))
+
