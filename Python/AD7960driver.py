@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr  2 19:11:58 2021
+
+@author: Nathan LoPresto
+"""
+
+
 import sys
 from fpga import FPGA
 import numpy as np
