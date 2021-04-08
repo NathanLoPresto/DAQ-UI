@@ -1,33 +1,36 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr  2 19:11:58 2021
+
+@author: Nathan LoPresto
+"""
+
 #Imports for time and matplotlib
-import random
 import time
+from fpga import FPGA
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
+from register_map import ad5453
+from AD7960driver import y
 
 #Initializing the start time of the program
 start_time= time.time()
-#Time between each trigger check and append
-terval=200
 # Create figure for plotting
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 xs = []
 ys = []
+f=FPGA()
 
-def trig():
-    #trigger address and mask
-    trig_addr = 0x60
-    trig_mask = 0x01
-
-    fpga.xem.UpdateTriggerOuts()
-    if (fpga.xem.IsTriggered(trig_addr, trig_mask)):
+def trig(trig_addr, trig_mask):
+  
+    f.xem.UpdateTriggerOuts()
+    if (f.xem.IsTriggered(trig_addr, trig_mask)):
         return True
     else:
         return False
         
 #Functions assigning values from pipeout to y, and time elapsed to x
-def y():
-   return random.randint(0,10)
 
 def x():
     return float((int((time.time()-start_time)*10))/10)
@@ -35,7 +38,7 @@ def x():
 # This function is called periodically from FuncAnimation
 def animate(i, xs, ys):
     
-    if trig():
+    if trig(ad5453['tx_register'], ad5453['control_register']):
         xs.append(x())
         ys.append(y())
     
@@ -55,7 +58,8 @@ def animate(i, xs, ys):
     plt.xlabel('Time (seconds since start)')
 
 
-ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), interval=terval)
+ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
 plt.show()
+
 
 
