@@ -5,20 +5,17 @@ Created on Mon Mar 29 13:17:08 2021
 @author: Nathan LoPresto
 """
 #External imports
-import sys
 from fpga import FPGA
-import numpy as np
 import matplotlib.pyplot as plt
 import time
-import pickle as pkl 
 from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 
 
 #local imports 
-from AD7960driver import y, adc_stream_mult, f
-from graphadc import x, animate, terval, xs, ys, fig, trig
+from graphadc import animate,xs, ys, fig, trig
+from register_map import ad5453, ad7952
 
 #Initializing the start time of the program
 start_time= time.time()  
@@ -34,6 +31,7 @@ if __name__ == "__main__":
 
     
     
+    while (trig(ad5453['tx_register'], ad7952['control_register'])):
+        ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
+        plt.show()
 
-    ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), interval=terval)
-    plt.show()
