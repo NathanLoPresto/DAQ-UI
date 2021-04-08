@@ -9,12 +9,15 @@ Created on Fri Apr  2 19:11:58 2021
 import time
 from fpga import FPGA
 from matplotlib import pyplot as plt
-import matplotlib.animation as animation
+
+#Local imports, needs the register map for the IC locations, 
+#AD7960 for plotting
 from register_map import ad5453
 from AD7960driver import y
 
 #Initializing the start time of the program
 start_time= time.time()
+
 # Create figure for plotting
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
@@ -22,6 +25,7 @@ xs = []
 ys = []
 f=FPGA()
 
+#Checks trigger, returns true if ready
 def trig(trig_addr, trig_mask):
   
     f.xem.UpdateTriggerOuts()
@@ -30,11 +34,11 @@ def trig(trig_addr, trig_mask):
     else:
         return False
         
-#Functions assigning values from pipeout to y, and time elapsed to x
-
+#Function assigning the difference between start time and time elapsed
 def x():
     return float((int((time.time()-start_time)*10))/10)
 
+#Animation function used in main, must draw from the register map
 # This function is called periodically from FuncAnimation
 def animate(i, xs, ys):
     
@@ -56,10 +60,4 @@ def animate(i, xs, ys):
     plt.title('The effect of time on value')
     plt.ylabel('Value')
     plt.xlabel('Time (seconds since start)')
-
-
-ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
-plt.show()
-
-
 
