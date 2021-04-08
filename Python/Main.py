@@ -9,7 +9,6 @@ from fpga import FPGA
 import matplotlib.pyplot as plt
 import time
 from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
-from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 
 
