@@ -29,8 +29,8 @@ if __name__ == "__main__":
 
 
     
-    
-    while (trig(ad5453['tx_register'], ad7952['control_register'])):
-        ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
-        plt.show()
+    while (True):
+        if (trig(ad5453['tx_register'], ad7952['control_register'])):
+            ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
+            plt.show()
 
