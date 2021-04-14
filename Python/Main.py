@@ -8,16 +8,17 @@ Created on Mon Mar 29 13:17:08 2021
 from fpga import FPGA
 import matplotlib.pyplot as plt
 import time
-from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
+#from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
 import matplotlib.animation as animation
 
 
 #local imports 
 from graphadc import animate,xs, ys, fig, trig
-from register_map import ad5453, ad7952
+from register_map import ad5453, ad7952, ic_addr
 
 #Initializing the start time of the program
 start_time= time.time()  
+
 
 #Main loop     
 if __name__ == "__main__":
@@ -27,10 +28,13 @@ if __name__ == "__main__":
         raise SystemExit
     f.one_shot(1)
 
+#Runs indefinately, checking for trigger to start reading ADC data and plotting
+#Can add exit parameters later.
+#(possibly time or number of calls to func.animate)
 
-    
     while (True):
-        if (trig(ad5453['tx_register'], ad7952['control_register'])):
-            ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
+        if (trig(ic_addr(ad5453, 'tx_register'), 
+                 ic_addr(ad7952, 'tx_register'))):
+            ani = animation.FuncAnimation(fig, animate, 
+                fargs=(xs, ys), repeat=False)
             plt.show()
-
