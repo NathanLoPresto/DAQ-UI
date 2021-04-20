@@ -2,9 +2,9 @@
 """
 Created on Mon Apr 12 18:28:04 2021
 
-@author: nalo1
+@author: Nathan loPresto
 """
-
+import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -16,7 +16,7 @@ ax = fig.add_subplot(1, 1, 1)
 xs = []
 ys = []
 
-def trig_emulator(trig_addr, trig_mask):
+def trig_emulator():
   r = random.randint(0,10000)
   if (r==1):
     return True
@@ -24,12 +24,13 @@ def trig_emulator(trig_addr, trig_mask):
     return False
 
 def pipe_emulator():
-  x=0
-  for i in range (0,10):
-    x = x + random.randint(0,10)
-  return x
-
-
+  #creates a size 10 array with random numbers 0-4096
+  x=np.array([np.round(4096*np.random.rand(1,10))])
+  #prints the arrays in the terminal window with time stamps
+  print(dt.datetime.now().strftime('%H:%M:%S.%f'))
+  print (x)
+  newdata = np.squeeze(x)
+  return newdata
 
 # This function is called periodically from FuncAnimation
 def animate(i, xs, ys):
@@ -54,6 +55,6 @@ def animate(i, xs, ys):
 
 # Set up plot to call animate() function periodically
 while (True):
-  if (trig_emulator(10101,10110)):
+  if (trig_emulator()):
     ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), repeat=False)
     plt.show()
