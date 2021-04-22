@@ -46,6 +46,10 @@ def animate(i, xs, ys):
     # Draw x and y lists
     ax.clear()
     ax.plot(xs, ys)
+ 
+    #dark mode setup
+    ax.set_facecolor('black')
+    ax.set_facecolor((0.5, 0.5, 0.5))
 
     # Format plot
     plt.xticks(rotation=45, ha='right')
