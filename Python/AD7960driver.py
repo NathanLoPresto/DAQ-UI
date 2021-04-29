@@ -4,17 +4,39 @@ Created on Fri Apr  2 19:11:58 2021
 
 @author: Nathan LoPresto/Lucas Koerner
 """
-
-from fpga import FPGA
 import numpy as np
-import matplotlib.pyplot as plt
-from drivers.utils import bin,twos_comp
+import numpy
+import random
+#will need fpga imports in the final iteration
 
-plt.ion()
+voltage_value = 4.09
 
-f=FPGA()
 
-#needed for adc_stream_mult()
+def trig_emulator():
+  r = random.randint(0,10000)
+  if (r==1):
+    return True
+  else:
+    return False
+
+def twos_comp(val, bits):
+    """compute the 2's complement of int value val
+        handle an array (list or numpy)
+    """
+
+    def twos_comp_scalar(val, bits):
+        if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
+            val = val - (1 << bits)        # compute negative value
+        return val                         # return positive value as is
+
+    if hasattr(val, "__len__"):
+        tmp_arr = np.array([])
+        for v in val:
+            tmp_arr = np.append(tmp_arr, twos_comp_scalar(v,bits))
+        return tmp_arr
+    else:
+        return twos_comp_scalar(val, bits)
+
 def convert_data(buf):
     bits = 16 # for AD7961 bits=18 for AD7960
     d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
@@ -23,32 +45,22 @@ def convert_data(buf):
     elif bits == 18:
         # not sure of this 
         d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
-        d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
+        # d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
+
     d_twos = twos_comp(d2, bits)
     return d_twos
 
-#returns the data needed for y()
-def adc_stream_mult(adc, swps = 4):
-    
-    cnt = 0
-    st = bytearray(np.asarray(np.ones(0, np.uint8)))  
-    f.xem.UpdateTriggerOuts()
-    
-    while cnt<swps:
-        if (f.xem.IsTriggered(0x60, 0x01)):
-            s,e = adc.read_pipe_out()
-            st += s 
-            cnt = cnt + 1
-            print(cnt)
-        f.xem.UpdateTriggerOuts()
-
-    d = convert_data(st)
-    plt.plot(d)
-    plt.show()
-    return d
-
-#function imported into graphadc for graphing
 def y():
-    a = adc_stream_mult(f,swps=4)
-    return (int)(bin(a))
+  y = Arr_to_int(convert_data(Read_Pipe_Out()))
+  print (y*voltage_value/131072)
+  return (y*voltage_value/131072)
 
+def Read_Pipe_Out():
+  r = np.round(4096*np.random.rand(16))
+  return r
+
+def Arr_to_int(y):
+  t=0
+  for i in range (len(y)-1):
+    t = t + y.item(i)
+  return t
