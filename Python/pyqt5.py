@@ -17,7 +17,7 @@ import matplotlib.animation as animation
 start_time= time.time()
 
 def greeting():
-  os.system ('python compound.py')
+  os.system ('python simulator.py')
 
 def ex():
     sys.exit()
