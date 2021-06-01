@@ -6,15 +6,14 @@ Created on Mon Mar 29 13:17:08 2021
 """
 #External imports
 from threading import Thread
-import matplotlib.pyplot as plt
 import time
 #from drivers.utils import rev_lookup, bin, test_bit, twos_comp, gen_mask
-import matplotlib.animation as animation
-
+import sys
+from PyQt5 import QtWidgets
 
 #local imports 
-from graphadc import animate,xs, ys, fig 
 from AD7960driver import trig_emulator
+from pyqtgraphing import MainWindow
 
 #Initializing the start time of the program
 start_time= time.time()  
@@ -58,6 +57,7 @@ Secondthread.start()
 
 while (True):
         if (trig_emulator()):
-            ani = animation.FuncAnimation(fig, animate, 
-                fargs=(xs, ys), repeat=False)
-            plt.show()
+            app = QtWidgets.QApplication(sys.argv)
+            w = MainWindow()
+            w.show()
+            sys.exit(app.exec_())
