@@ -1,51 +1,53 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr  2 19:11:58 2021
-
-@author: Nathan LoPresto
-"""
-
-#Imports for time, fpga, and matplotlib
+from PyQt5 import QtWidgets, QtCore
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
+import sys  # We need sys so that we can pass argv to QApplication
+import os
+from random import randint
 import time
-from matplotlib import pyplot as plt
-
-
-#Receives the y values from AD7960
-from AD7960driver import y
+from AD7960driver import y 
 
 #Initializing the start time of the program
 start_time= time.time()
-
-# Create figure for plotting
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-xs = []
-ys = []
 
 
 #Function assigning the difference between start time and time elapsed
 def x():
     return float((int((time.time()-start_time)*10))/10)
 
-#Animation function used in main, must draw from the register map
-# This function is called periodically from FuncAnimation
-def animate(i, xs, ys):
-    
 
-    xs.append(x())
-    ys.append(y())
-    
-    # Limits the x and y lists to 50 variables 
-    xs = xs[-50:]
-    ys = ys[-50:]
-    
-    # Draw x and y lists
-    ax.clear()
-    ax.plot(xs, ys)
+class MainWindow(QtWidgets.QMainWindow):
 
-    # Format plot
-    plt.xticks(rotation=45, ha='right')
-    plt.subplots_adjust(bottom=0.30)
-    plt.title('The effect of time on Voltage')
-    plt.ylabel('Voltage')
-    plt.xlabel('Time (seconds since start)')
+    def __init__(self, *args, **kwargs):
+        super(MainWindow, self).__init__(*args, **kwargs)
+
+        self.graphWidget = pg.PlotWidget()
+        self.setCentralWidget(self.graphWidget)
+
+        self.x = list(range(100))  # 100 time points
+        self.y = [y() for _ in range(100)]  # 100 data points
+
+        self.graphWidget.setBackground('w')
+
+        pen = pg.mkPen(color=(255, 0, 0))
+        self.data_line =  self.graphWidget.plot(self.x, self.y, pen=pen)
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.start()
+
+    def update_plot_data(self):
+
+        self.x = self.x[1:]  # Remove the first y element.
+        self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
+
+        self.y = self.y[1:]  # Remove the first
+        self.y.append( y())  # Add a new random value.
+
+        self.data_line.setData(self.x, self.y)  # Update the data.
+
+
+app = QtWidgets.QApplication(sys.argv)
+w = MainWindow()
+w.show()
+sys.exit(app.exec_())
