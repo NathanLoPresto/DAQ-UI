@@ -37,7 +37,7 @@ def twos_comp(val, bits):
         return twos_comp_scalar(val, bits)
 
 def convert_data(buf):
-    bits = 16 # for AD7961 bits=18 for AD7960
+    bits = 18 # for AD7961 bits=18 for AD7960
     d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
     if bits == 16:
         d2 = d[0::4] + (d[1::4] << 8)
@@ -50,12 +50,10 @@ def convert_data(buf):
     return d_twos
 
 def y():
-  y = Arr_to_int(convert_data(Read_Pipe_Out()))
+  y = Arr_to_int(convert_data(fifo_read()))
   print (y*voltage_value/131072)
   return (y*voltage_value/131072)
 
-def Read_Pipe_Out():
-  return fifo_read()
 
 def Arr_to_int(y):
   t=0
