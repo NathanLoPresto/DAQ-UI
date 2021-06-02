@@ -7,17 +7,16 @@ Created on Fri Apr  2 19:11:58 2021
 import numpy as np
 import numpy
 import random
+
 #will need fpga imports in the final iteration
+from fifousb import fifo_read, trig_addr
+
 
 voltage_value = 4.09
 
 
 def trig_emulator():
-  r = random.randint(0,10000)
-  if (r==1):
-    return True
-  else:
-    return False
+  return trig_addr()
 
 def twos_comp(val, bits):
     """compute the 2's complement of int value val
@@ -56,8 +55,7 @@ def y():
   return (y*voltage_value/131072)
 
 def Read_Pipe_Out():
-  r = np.round(4096*np.random.rand(16))
-  return r
+  return fifo_read()
 
 def Arr_to_int(y):
   t=0
