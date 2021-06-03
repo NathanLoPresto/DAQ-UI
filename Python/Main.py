@@ -12,22 +12,13 @@ import sys
 from PyQt5 import QtWidgets
 
 #local imports 
-from AD7960driver import trig_emulator
+from fifousb import trig_addr
 from pyqtgraphing import MainWindow
+from fpga import FPGA
 
 #Initializing the start time of the program
 start_time= time.time()  
 
-
-#Main loop 
-'''    
-if __name__ == "__main__":
-    print ('---FPGA ADC and DAC Controller---')
-    f = FPGA()
-    if (False == f.init_device()):
-        raise SystemExit
-    f.one_shot(1)
-'''
 class myThread(Thread):
     def __init__(self, value):
         Thread.__init__(self)
@@ -37,8 +28,9 @@ class myThread(Thread):
       if (self.value==1):
         print ("going")
       else:
-        cont_p()
-def cont_p():
+        sec_thread()
+
+def sec_thread():
   x=0
   while (x<17):
     print ("Hello I am the second function")
@@ -56,7 +48,7 @@ Secondthread = myThread(2)
 Secondthread.start()
 
 while (True):
-        if (trig_emulator()):
+        if (trig_addr()):
             app = QtWidgets.QApplication(sys.argv)
             w = MainWindow()
             w.show()
