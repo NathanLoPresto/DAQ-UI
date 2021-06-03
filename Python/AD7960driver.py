@@ -9,14 +9,10 @@ import numpy
 import random
 
 #will need fpga imports in the final iteration
-from fifousb import fifo_read, trig_addr
+from fifousb import fifo_read
 
 
 voltage_value = 4.09
-
-
-def trig_emulator():
-  return trig_addr()
 
 def twos_comp(val, bits):
     """compute the 2's complement of int value val
@@ -37,7 +33,7 @@ def twos_comp(val, bits):
         return twos_comp_scalar(val, bits)
 
 def convert_data(buf):
-    bits = 18 # for AD7961 bits=18 for AD7960
+    bits = 16 # for AD7961 bits=18 for AD7960
     d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
     if bits == 16:
         d2 = d[0::4] + (d[1::4] << 8)
