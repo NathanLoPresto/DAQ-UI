@@ -34,5 +34,5 @@ def fifo_read():
 
 def trig_addr():
     dev.UpdateTriggerOuts()
-    tf = dev.IsTriggered(0x70, 0x10)
+    tf = dev.IsTriggered(0x70, 0x80)
     return tf
