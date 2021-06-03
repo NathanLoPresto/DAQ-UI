@@ -1,24 +1,67 @@
 from PyQt5 import QtWidgets, QtCore
 from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
-import sys  # We need sys so that we can pass argv to QApplication
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QWidget
+import sys
 import os
 import ok
-from random import randint
 import time
+import csv
+import numpy as np
+from datetime import datetime
+
+#local imports, needing the fpga initialization
+#and the AD7960 data from the driver to graph
 from fpga import FPGA
 from AD7960driver import y 
-from CSVfilemaker import filemaker
 
 #Initializing the start time of the program
+#As well as the time and date for file naming
 start_time= time.time()
-d1 = []
+now = datetime.now()
+current_time = now.strftime("%H_%M_%S")
+
+#Placeholding array to hold the data the retention data 
+placeholder = []
+
+#If the Run window has been pressed yet
+ran=False
 
 #Function assigning the difference between start time and time elapsed
 def x():
     return float((int((time.time()-start_time)*10))/10)
 
+#Creates a file with a single dataset, named with time of day
+def filemaker(d1):
+    nom = ("OPAMPDATA" + (str)(current_time))
 
+    with open((str)(nom), 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(d1)
+
+#Once save and exit is pushed, data is saved in a new CSV file        
+def sande():
+  print ("Saving and exiting the program")
+  filemaker(placeholder)
+  sys.exit()
+
+#If the "Run" button is psuhed, the save and exit button will become an option
+def greeting():
+  ran = True
+  os.system('python Main.py')
+  b = QPushButton('Save and Exit')
+  b.clicked.connect(sande)
+  layout.addWidget(b)
+
+#Linked to the "exit" button on the main window 
+def ex():
+    sys.exit()
+
+#Qt5 window class, will graph locally instead of drawing from Matplotlib
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args, **kwargs):
@@ -47,18 +90,38 @@ class MainWindow(QtWidgets.QMainWindow):
         self.y = self.y[1:]  # Remove the first
         b=y()
         self.y.append(b)  # Add a new random value.
-        d1.append(b) #appending to the evential CSV file
-
+        placeholder.append(b) #appending to the evential CSV file
         self.data_line.setData(self.x, self.y)  # Update the data.
 
+#The old contents of UI.py, makes the button window 
+app = QApplication(sys.argv)
+window = QWidget()
+window.setWindowTitle('OPAMP GUI')
+layout = QVBoxLayout()
+
+btn = QPushButton('Run software')
+btn.clicked.connect(greeting)
+bt = QPushButton('Exit')
+bt.clicked.connect(ex)  
+
+layout.addWidget(btn)
+layout.addWidget(bt)
+msg = QLabel('')
+layout.addWidget(msg)
+window.setLayout(layout)
+window.setStyleSheet("background-color: grey;")
+window.setGeometry(500,200,500,200)
+window.show()
+
+#Creates one instance of the front panel
 xem = ok.okCFrontPanel()
+
 if (xem.NoError != xem.OpenBySerial("")):
     print ("The graphing will not commence due to an error")
+    sys.exit()
 
 else:
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow()
     w.show()
     sys.exit(app.exec_())
-
-filemaker(d1)
