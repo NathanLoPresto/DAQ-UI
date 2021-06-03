@@ -26,10 +26,7 @@ now = datetime.now()
 current_time = now.strftime("%H_%M_%S")
 
 #Placeholding array to hold the data the retention data 
-placeholder = []
-
-#If the Run window has been pressed yet
-ran=False
+data_set = []
 
 #Function assigning the difference between start time and time elapsed
 def x():
@@ -44,18 +41,15 @@ def filemaker(d1):
         writer.writerow(d1)
 
 #Once save and exit is pushed, data is saved in a new CSV file        
-def sande():
+def save_and_exit():
   print ("Saving and exiting the program")
-  filemaker(placeholder)
+  if (len(data_set)!=0):
+    filemaker(data_set)
   sys.exit()
 
-#If the "Run" button is psuhed, the save and exit button will become an option
-def greeting():
-  ran = True
-  os.system('python Main.py')
-  b = QPushButton('Save and Exit')
-  b.clicked.connect(sande)
-  layout.addWidget(b)
+#If the "Run" button is pushed, the save and exit button will become an option
+def main_loop():
+    os.system('python Main.py')
 
 #Linked to the "exit" button on the main window 
 def ex():
@@ -90,7 +84,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.y = self.y[1:]  # Remove the first
         b=y()
         self.y.append(b)  # Add a new random value.
-        placeholder.append(b) #appending to the evential CSV file
+        data_set.append(b) #appending to the evential CSV file
         self.data_line.setData(self.x, self.y)  # Update the data.
 
 #The old contents of UI.py, makes the button window 
@@ -100,12 +94,14 @@ window.setWindowTitle('OPAMP GUI')
 layout = QVBoxLayout()
 
 btn = QPushButton('Run software')
-btn.clicked.connect(greeting)
+btn.clicked.connect(main_loop)
 bt = QPushButton('Exit')
 bt.clicked.connect(ex)  
-
+b = QPushButton('Save and Exit')
+b.clicked.connect(save_and_exit)
 layout.addWidget(btn)
 layout.addWidget(bt)
+layout.addWidget(b)
 msg = QLabel('')
 layout.addWidget(msg)
 window.setLayout(layout)
