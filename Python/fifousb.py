@@ -15,8 +15,6 @@ f = FPGA()
 f.init_device()
 dev = ok.okCFrontPanel()
  
-datain = bytearray(0)
-
 dev.OpenBySerial("")
 error = dev.ConfigureFPGA("example.bit")
 # It’s a good idea to check for errors here!!
