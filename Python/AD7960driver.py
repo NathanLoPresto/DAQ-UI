@@ -7,17 +7,11 @@ Created on Fri Apr  2 19:11:58 2021
 import numpy as np
 import numpy
 import random
-
-#will need fpga imports in the final iteration
 from fifousb import fifo_read
-
 
 voltage_value = 4.09
 
 def twos_comp(val, bits):
-    """compute the 2's complement of int value val
-        handle an array (list or numpy)
-    """
 
     def twos_comp_scalar(val, bits):
         if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
