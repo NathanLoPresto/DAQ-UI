@@ -29,6 +29,29 @@ adc_pll_reset =  ep(0x01, 17, 'wi')
 adc_fifo_reset = ep(0x01, [18,19,20,21], 'wi')
 adc_en0 =   ep(0x01, [12,13,14,15], 'wi')
 v_scaling = 152.6e-6
+data_set = [5,6]
+start_time= time.time()
+now = datetime.datetime.now()
+current_time = now.strftime("%H_%M_%S")
+
+f = FPGA()
+if (False == f.init_device()):
+    raise SystemExit
+dev = ok.okCFrontPanel()
+dev.OpenBySerial("")
+
+def get_meta_data():
+    meta_dict = {
+        "Time" : (str)(current_time),
+        "Date" : "{:%d, %b %Y}".format(datetime.date.today()),
+        "Firmware version": dev.GetDeviceMajorVersion(),
+        "Product" : dev.GetBoardModel(),
+        "Product Serial Number" : dev.GetSerialNumber(),
+        "Device ID" : dev.GetDeviceID(),
+        "OS" : platform.system(),
+        "OS Version" : platform.version()
+    }
+    return meta_dict
 
 def twos_comp(val, bits):
 
@@ -97,6 +120,22 @@ def gen_mask(bit_pos):
     mask = sum([(1 << b) for b in bit_pos])
     return mask 
 
+#Creates a file with a single dataset, named with time of day
+def filemaker(d1):
+    nom = ("OPAMPDATA" + (str)(current_time)+ ".hdf5")
+    hf = h5py.File(nom, 'w')
+    hf.create_dataset('dataset_1', data=data_set)
+    hf.close()
+    data=get_meta_data()
+    with open ('metadata' + (str) (current_time) + ".json", 'w') as outfile:
+        json.dump(data, outfile)
+    hdf5_reader(nom)
+
+#Temp way to read my HDF5 files without third party software 
+def hdf5_reader(nom):
+    hf = h5py.File(nom, 'r')
+    print ("The data in the hdf5 file is: " + (str)(hf.keys()))
+
 def toggle_high(ep_bit, adc_chan = None):
     if adc_chan is None:
         mask = gen_mask(ep_bit.bits)
@@ -106,6 +145,28 @@ def toggle_high(ep_bit, adc_chan = None):
     f.xem.UpdateWireIns()
     f.xem.SetWireInValue(ep_bit.addr, 0x0000, mask)   # back low 
     f.xem.UpdateWireIns()
+
+#Once save and exit is pushed, data is saved in a new CSV file        
+def save_and_exit():
+  print ("Saving and exiting the program")
+  if (len(data_set)!=0):
+    filemaker(data_set)
+  sys.exit()
+
+#If the "Run" button is pushed, the save and exit button will become an option
+def main_loop():
+    if (f.xem.NoError != f.xem.OpenBySerial("")):
+            print ("You can't run the software if no device is detected")
+            return(False)
+    else:
+        app = QtWidgets.QApplication(sys.argv)
+        w = MainWindow()
+        w.show()
+        sys.exit(app.exec_())
+
+#Linked to the "exit" button on the main window 
+def ex():
+    sys.exit()
 
 #Qt5 window class, to be initializaed upon call to Main.py
 class MainWindow(QtWidgets.QMainWindow):
@@ -135,15 +196,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x.append(a)  # Add a new value 1 higher than the last.
         self.y = self.y[1:]  # Remove the first
         d,s,e =adc_plot(f, adc_chan=0, PLT=False)
-        self.y.append(voltage_value*np.mean(d))  # Add a new random value.
+        self.y.append(voltage_value*np.mean(d))
+        # Add a new random value.
         #appending to the evential HDF5 file
         self.data_line.setData(self.x, self.y)  # Update the data.
 
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
-    f = FPGA()
-    if (False == f.init_device()):
-        raise SystemExit
     f.one_shot(1)
         # reset PLL 
     toggle_high(adc_pll_reset)
@@ -156,9 +215,26 @@ if __name__ == "__main__":
     set_bit(adc_reset, adc_chan = adc_chan)
     set_bit(adc_en0, adc_chan = adc_chan)
 
-    app = QtWidgets.QApplication(sys.argv)
-    w = MainWindow()
-    w.show()
-    sys.exit(app.exec_())
-
 #This is to be changed, max voltage value allowed by the read
+#This block creates the custom selection window
+app = QApplication(sys.argv)
+window = QWidget()
+app.setStyle('Fusion')
+window.setWindowTitle('covg_fpga')
+app.setWindowIcon(QtGui.QIcon("qt5logo.png"))
+layout = QVBoxLayout()
+btn = QPushButton('Start Graphing')
+btn.clicked.connect(main_loop)
+bt = QPushButton('Exit')
+bt.clicked.connect(ex)  
+b = QPushButton('Save and Exit')
+b.clicked.connect(save_and_exit)
+layout.addWidget(btn)
+layout.addWidget(bt)
+layout.addWidget(b)
+msg = QLabel('')
+layout.addWidget(msg)
+window.setLayout(layout)
+window.setStyleSheet("background-color: grey")
+window.setGeometry(500,200,500,200)
+window.show()
