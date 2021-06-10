@@ -29,10 +29,12 @@ adc_pll_reset =  ep(0x01, 17, 'wi')
 adc_fifo_reset = ep(0x01, [18,19,20,21], 'wi')
 adc_en0 =   ep(0x01, [12,13,14,15], 'wi')
 v_scaling = 152.6e-6
-data_set = [5,6]
+data_set = []
 start_time= time.time()
 now = datetime.datetime.now()
 current_time = now.strftime("%H_%M_%S")
+
+transfer_length=(1024)
 
 f = FPGA()
 if (False == f.init_device()):
@@ -90,7 +92,7 @@ def convert_data(buf):
     return d_twos
 
 def adc_plot(fpga, adc_chan = 0, filename = None, PLT = False):
-    s,e = fpga.read_pipe_out(addr_offset = adc_chan + 1)
+    s,e = fpga.read_pipe_out(addr_offset = adc_chan + 1, data_len=transfer_length)
     d = convert_data(s)
     v_scaling = 152.6e-6
     r=(d*v_scaling)
@@ -176,7 +178,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
-
         self.x = list(range(100))  # 100 time points
         self.y = [0 for _ in range(100)]  # 100 data points
 
@@ -191,16 +192,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
+        d,s,e =adc_plot(f, adc_chan=0, PLT=False)
+        print (time.time())
+        print ("This is the length of d" + (str)(np.size(d)))
         self.x = self.x[1:]  # Remove the first y element.
         a=(self.x[-1]+1)
         self.x.append(a)  # Add a new value 1 higher than the last.
         self.y = self.y[1:]  # Remove the first
-        d,s,e =adc_plot(f, adc_chan=0, PLT=False)
-        self.y.append(voltage_value*np.mean(d))
-        # Add a new random value.
-        #appending to the evential HDF5 file
+        self.y = np.append(self.y, np.mean(d))
+        for x in range (np.size(d)-1):
+            data_set.append (d[x])
         self.data_line.setData(self.x, self.y)  # Update the data.
-
+        print (time.time())
+        
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
     f.one_shot(1)
