@@ -17,9 +17,10 @@ from collections import namedtuple
 import sys
 from fpga import FPGA
 import pickle as pkl 
+from scipy import signal
+from create_source import adc_list
 
 #local imports
-adc_chan=0
 voltage_value = 4.096
 ep = namedtuple('ep', 'addr bits type')
 adc_pipe_rd_trig = ep(0x70, [3,4,5,6], 'to')
@@ -192,7 +193,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        d,s,e =adc_plot(f, adc_chan=0, PLT=False)
+        d,s,e =adc_plot(f, adc_chan=adc_list[0].addr, PLT=False)
         print (time.time())
         print ("This is the length of d" + (str)(np.size(d)))
         self.x = self.x[1:]  # Remove the first y element.
