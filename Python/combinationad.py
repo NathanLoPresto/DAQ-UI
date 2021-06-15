@@ -18,7 +18,9 @@ import sys
 from fpga import FPGA
 import pickle as pkl 
 from scipy import signal
-from create_source import adc_list
+
+#This file will be manipulated by the user
+from create_source import adc_list, adcs_used
 
 #local imports
 voltage_value = 4.096
@@ -162,8 +164,9 @@ def main_loop():
             print ("You can't run the software if no device is detected")
             return(False)
     else:
+        
         app = QtWidgets.QApplication(sys.argv)
-        w = MainWindow()
+        w = MainWindow(chan=adc_list[0].addr)
         w.show()
         sys.exit(app.exec_())
 
@@ -174,38 +177,35 @@ def ex():
 #Qt5 window class, to be initializaed upon call to Main.py
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self,chan, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.x = list(range(100))  # 100 time points
         self.y = [0 for _ in range(100)]  # 100 data points
-
+        self.chan=chan
         self.graphWidget.setBackground('w')
-
         pen = pg.mkPen(color=(255, 0, 0))
         self.data_line =  self.graphWidget.plot(self.x, self.y, pen=pen)
-
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        d,s,e =adc_plot(f, adc_chan=adc_list[0].addr, PLT=False)
-        print (time.time())
-        print ("This is the length of d" + (str)(np.size(d)))
         self.x = self.x[1:]  # Remove the first y element.
         a=(self.x[-1]+1)
-        self.x.append(a)  # Add a new value 1 higher than the last.
+        self.x.append(a)  
+        d,s,e =adc_plot(f, adc_chan=self.chan, PLT=False)
         self.y = self.y[1:]  # Remove the first
         self.y = np.append(self.y, np.mean(d))
-        for x in range (np.size(d)-1):
+        '''
+        for x in range (np.size(d)):
             data_set.append (d[x])
+            '''
         self.data_line.setData(self.x, self.y)  # Update the data.
-        print (time.time())
-        
+
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
     f.one_shot(1)
