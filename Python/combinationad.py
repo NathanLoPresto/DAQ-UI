@@ -20,7 +20,7 @@ import pickle as pkl
 from scipy import signal
 
 #This file will be manipulated by the user
-from create_source import adc_list, adcs_used
+from create_source import adc_list
 
 #local imports
 voltage_value = 4.096
@@ -140,6 +140,7 @@ def filemaker(d1):
 def hdf5_reader(nom):
     hf = h5py.File(nom, 'r')
     print ("The data in the hdf5 file is: " + (str)(hf.keys()))
+    print(hf.get('dataset_1'))
 
 def toggle_high(ep_bit, adc_chan = None):
     if adc_chan is None:
@@ -164,10 +165,13 @@ def main_loop():
             print ("You can't run the software if no device is detected")
             return(False)
     else:
-        
-        app = QtWidgets.QApplication(sys.argv)
-        w = MainWindow(chan=adc_list[0].addr)
+    
+        app= QtWidgets.QApplication(sys.argv)
+        w =  MainWindow(chan=adc_list[0].number)
         w.show()
+        app2 = QtWidgets.QApplication(sys.argv)
+        w2 = MainWindow(chan=adc_list[1].number)
+        w2.show()
         sys.exit(app.exec_())
 
 #Linked to the "exit" button on the main window 
@@ -179,7 +183,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self,chan, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-
+        
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.x = list(range(100))  # 100 time points
@@ -194,18 +198,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
+        '''if (Istriggered(adc_list[self.chan].trigaddr)):
+        '''
+        d,s,e =adc_plot(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+        data_set.append(d)
         self.x = self.x[1:]  # Remove the first y element.
         a=(self.x[-1]+1)
-        self.x.append(a)  
-        d,s,e =adc_plot(f, adc_chan=self.chan, PLT=False)
+        self.x.append(a)
         self.y = self.y[1:]  # Remove the first
         self.y = np.append(self.y, np.mean(d))
-        '''
-        for x in range (np.size(d)):
-            data_set.append (d[x])
-            '''
-        self.data_line.setData(self.x, self.y)  # Update the data.
-
+        if (adc_list[self.chan].used):
+            self.data_line.setData(self.x, self.y)  # Update the data.
+    
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
     f.one_shot(1)
@@ -219,6 +223,17 @@ if __name__ == "__main__":
     # enable ADC
     set_bit(adc_reset, adc_chan = adc_chan)
     set_bit(adc_en0, adc_chan = adc_chan)
+
+#This could be made easier, in a loop with objects
+def selection_change():
+    return cb.currentText()
+def selection_change2():
+    return cb2.currentText()
+def selection_change3():
+    return cb3.currentText()
+def selection_change4():
+    return cb4.currentText()
+    
 
 #This is to be changed, max voltage value allowed by the read
 #This block creates the custom selection window
@@ -234,9 +249,25 @@ bt = QPushButton('Exit')
 bt.clicked.connect(ex)  
 b = QPushButton('Save and Exit')
 b.clicked.connect(save_and_exit)
+cb = QComboBox()
+cb.addItems(["Channel 1 graphed", "Channel 1 NOT graphed"])
+cb.currentIndexChanged.connect(selection_change)
+cb2 = QComboBox()
+cb2.addItems(["Channel 2 graphed", "Channel 2 NOT graphed"])
+cb2.currentIndexChanged.connect(selection_change2)
+cb3 = QComboBox()
+cb3.addItems(["Channel 3 graphed", "Channel 3 NOT graphed"])
+cb3.currentIndexChanged.connect(selection_change3)
+cb4 = QComboBox()
+cb4.addItems(["Channel 4 graphed", "Channel 4 NOT graphed"])
+cb4.currentIndexChanged.connect(selection_change4)
 layout.addWidget(btn)
 layout.addWidget(bt)
 layout.addWidget(b)
+layout.addWidget(cb)
+layout.addWidget(cb2)
+layout.addWidget(cb3)
+layout.addWidget(cb4)
 msg = QLabel('')
 layout.addWidget(msg)
 window.setLayout(layout)
