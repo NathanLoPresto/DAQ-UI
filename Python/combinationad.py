@@ -19,14 +19,12 @@ from fpga import FPGA
 import pickle as pkl 
 from scipy import signal
 
-#This file will be manipulated by the user
+#Local imports, full of pin locations
 from create_source import adc_list
 
-#local imports
+
 voltage_value = 4.096
 ep = namedtuple('ep', 'addr bits type')
-adc_pipe_rd_trig = ep(0x70, [3,4,5,6], 'to')
-adc_pipe = ep(0xA1, [i for i in range(32)], 'po')
 adc_reset = ep(0x01, [8,9,10,11], 'wi')
 adc_pll_reset =  ep(0x01, 17, 'wi')
 adc_fifo_reset = ep(0x01, [18,19,20,21], 'wi')
@@ -37,8 +35,10 @@ start_time= time.time()
 now = datetime.datetime.now()
 current_time = now.strftime("%H_%M_%S")
 
+#Should be half of the fifo size
 transfer_length=(1024)
 
+#One and only initialization of the hardware
 f = FPGA()
 if (False == f.init_device()):
     raise SystemExit
@@ -49,10 +49,10 @@ def get_meta_data():
     meta_dict = {
         "Time" : (str)(current_time),
         "Date" : "{:%d, %b %Y}".format(datetime.date.today()),
-        "Firmware version": dev.GetDeviceMajorVersion(),
-        "Product" : dev.GetBoardModel(),
-        "Product Serial Number" : dev.GetSerialNumber(),
-        "Device ID" : dev.GetDeviceID(),
+        "Firmware version": f.xem.GetDeviceMajorVersion(),
+        "Product" : f.xem.GetBoardModel(),
+        "Product Serial Number" : f.xem.GetSerialNumber(),
+        "Device ID" : f.xem.GetDeviceID(),
         "OS" : platform.system(),
         "OS Version" : platform.version()
     }
@@ -139,8 +139,7 @@ def filemaker(d1):
 #Temp way to read my HDF5 files without third party software 
 def hdf5_reader(nom):
     hf = h5py.File(nom, 'r')
-    print ("The data in the hdf5 file is: " + (str)(hf.keys()))
-    print(hf.get('dataset_1'))
+    print ("Successfully saved as HDF5 file.")
 
 def toggle_high(ep_bit, adc_chan = None):
     if adc_chan is None:
@@ -165,13 +164,22 @@ def main_loop():
             print ("You can't run the software if no device is detected")
             return(False)
     else:
-    
-        app= QtWidgets.QApplication(sys.argv)
-        w =  MainWindow(chan=adc_list[0].number)
-        w.show()
-        app2 = QtWidgets.QApplication(sys.argv)
-        w2 = MainWindow(chan=adc_list[1].number)
-        w2.show()
+        if (adc_list[0].used):
+            app= QtWidgets.QApplication(sys.argv)
+            w =  MainWindow(chan=adc_list[0].number)
+            w.show()
+        if (adc_list[1].used):
+            app2 = QtWidgets.QApplication(sys.argv)
+            w2 = MainWindow(chan=adc_list[1].number)
+            w2.show()
+        if (adc_list[2].used):
+            app3 = QtWidgets.QApplication(sys.argv)
+            w3 = MainWindow(chan=adc_list[2].number)
+            w3.show()
+        if (adc_list[3].used):
+            app4 = QtWidgets.QApplication(sys.argv)
+            w4 = MainWindow(chan=adc_list[3].number)
+            w4.show()
         sys.exit(app.exec_())
 
 #Linked to the "exit" button on the main window 
@@ -184,17 +192,21 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self,chan, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         
+        self.chan=chan
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.x = list(range(100))  # 100 time points
         self.y = [0 for _ in range(100)]  # 100 data points
-        self.chan=chan
         self.graphWidget.setBackground('w')
+        self.setWindowTitle("Channel " + (str)(self.chan))
+        self.setGeometry((500*self.chan), 50, 500, 300)
         pen = pg.mkPen(color=(255, 0, 0))
         self.data_line =  self.graphWidget.plot(self.x, self.y, pen=pen)
+        #closing the graph window(with the drop down menu)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
+
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
@@ -207,9 +219,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x.append(a)
         self.y = self.y[1:]  # Remove the first
         self.y = np.append(self.y, np.mean(d))
-        if (adc_list[self.chan].used):
+        #only appending graph values(with the drop down menu)
+        if (adc_list[self.chan].number==0 and
+            selection_change()=="Channel 1 graphed"):
             self.data_line.setData(self.x, self.y)  # Update the data.
-    
+        elif (adc_list[self.chan].number==1 and
+            selection_change2()=="Channel 2 graphed"):
+            self.data_line.setData(self.x, self.y)  # Update the data.
+        elif (adc_list[self.chan].number==2 and
+            selection_change3()=="Channel 3 graphed"):
+            self.data_line.setData(self.x, self.y)  # Update the data.
+        elif (adc_list[self.chan].number==3 and
+            selection_change4()=="Channel 4 graphed"):
+            self.data_line.setData(self.x, self.y)  # Update the data.
+        elif (selection_change2()=='Channel 2 NOT graphed'):
+            self.hide()
+        elif (selection_change()=='Channel 1 NOT graphed'):
+            self.hide()
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
     f.one_shot(1)
@@ -234,7 +260,6 @@ def selection_change3():
 def selection_change4():
     return cb4.currentText()
     
-
 #This is to be changed, max voltage value allowed by the read
 #This block creates the custom selection window
 app = QApplication(sys.argv)
