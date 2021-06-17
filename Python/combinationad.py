@@ -30,13 +30,17 @@ adc_pll_reset =  ep(0x01, 17, 'wi')
 adc_fifo_reset = ep(0x01, [18,19,20,21], 'wi')
 adc_en0 =   ep(0x01, [12,13,14,15], 'wi')
 v_scaling = 152.6e-6
-data_set = []
+
+data_set = [[],[],[],[]]
+
+#data_set = []
+
 start_time= time.time()
 now = datetime.datetime.now()
 current_time = now.strftime("%H_%M_%S")
 
 #Should be half of the fifo size
-transfer_length=(1024)
+transfer_length=(4096)
 
 #One and only initialization of the hardware
 f = FPGA()
@@ -129,17 +133,24 @@ def gen_mask(bit_pos):
 def filemaker(d1):
     nom = ("OPAMPDATA" + (str)(current_time)+ ".hdf5")
     hf = h5py.File(nom, 'w')
-    hf.create_dataset('dataset_1', data=data_set)
+
+    for x in adc_list:
+        hf.create_dataset((str)((str)(x)+ "dataset"), data=data_set[x.number])
+
     hf.close()
     data=get_meta_data()
     with open ('metadata' + (str) (current_time) + ".json", 'w') as outfile:
         json.dump(data, outfile)
     hdf5_reader(nom)
 
-#Temp way to read my HDF5 files without third party software 
+
 def hdf5_reader(nom):
     hf = h5py.File(nom, 'r')
-    print ("Successfully saved as HDF5 file.")
+    for x in hf.keys():
+        n1= hf.get(x)
+        n1 = np.array(n1)
+        print ("This is one dataset and it's dimensions are: " + (str)(n1.shape))
+        print (n1)
 
 def toggle_high(ep_bit, adc_chan = None):
     if adc_chan is None:
@@ -164,6 +175,7 @@ def main_loop():
             print ("You can't run the software if no device is detected")
             return(False)
     else:
+        
         if (adc_list[0].used):
             app= QtWidgets.QApplication(sys.argv)
             w =  MainWindow(chan=adc_list[0].number)
@@ -180,11 +192,16 @@ def main_loop():
             app4 = QtWidgets.QApplication(sys.argv)
             w4 = MainWindow(chan=adc_list[3].number)
             w4.show()
+        
         sys.exit(app.exec_())
 
 #Linked to the "exit" button on the main window 
 def ex():
     sys.exit()
+
+#This could be made easier, in a loop with objects
+def selection_change(drop_down):
+    return drop_down.currentText()
 
 #Qt5 window class, to be initializaed upon call to Main.py
 class MainWindow(QtWidgets.QMainWindow):
@@ -201,6 +218,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Channel " + (str)(self.chan))
         self.setGeometry((500*self.chan), 50, 500, 300)
         pen = pg.mkPen(color=(255, 0, 0))
+        self.cbs = [cb, cb2, cb3, cb4]
         self.data_line =  self.graphWidget.plot(self.x, self.y, pen=pen)
         #closing the graph window(with the drop down menu)
         self.timer = QtCore.QTimer()
@@ -213,29 +231,21 @@ class MainWindow(QtWidgets.QMainWindow):
         '''if (Istriggered(adc_list[self.chan].trigaddr)):
         '''
         d,s,e =adc_plot(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-        data_set.append(d)
+        data_set[self.chan].append(d)
         self.x = self.x[1:]  # Remove the first y element.
         a=(self.x[-1]+1)
         self.x.append(a)
         self.y = self.y[1:]  # Remove the first
         self.y = np.append(self.y, np.mean(d))
-        #only appending graph values(with the drop down menu)
-        if (adc_list[self.chan].number==0 and
-            selection_change()=="Channel 1 graphed"):
-            self.data_line.setData(self.x, self.y)  # Update the data.
-        elif (adc_list[self.chan].number==1 and
-            selection_change2()=="Channel 2 graphed"):
-            self.data_line.setData(self.x, self.y)  # Update the data.
-        elif (adc_list[self.chan].number==2 and
-            selection_change3()=="Channel 3 graphed"):
-            self.data_line.setData(self.x, self.y)  # Update the data.
-        elif (adc_list[self.chan].number==3 and
-            selection_change4()=="Channel 4 graphed"):
-            self.data_line.setData(self.x, self.y)  # Update the data.
-        elif (selection_change2()=='Channel 2 NOT graphed'):
-            self.hide()
-        elif (selection_change()=='Channel 1 NOT graphed'):
-            self.hide()
+
+        for x in self.cbs:
+            if selection_change(x)==("Channel " + (str)(self.chan +1) + " graphed"):
+                self.data_line.setData(self.x, self.y)
+
+        for y in self.cbs:
+            if (selection_change(y)=="Channel " + (str)(self.chan+1) + " NOT graphed"):
+                self.hide()
+
 if __name__ == "__main__":
     print ('---FPGA ADC and DAC Controller---')
     f.one_shot(1)
@@ -250,16 +260,6 @@ if __name__ == "__main__":
     set_bit(adc_reset, adc_chan = adc_chan)
     set_bit(adc_en0, adc_chan = adc_chan)
 
-#This could be made easier, in a loop with objects
-def selection_change():
-    return cb.currentText()
-def selection_change2():
-    return cb2.currentText()
-def selection_change3():
-    return cb3.currentText()
-def selection_change4():
-    return cb4.currentText()
-    
 #This is to be changed, max voltage value allowed by the read
 #This block creates the custom selection window
 app = QApplication(sys.argv)
@@ -276,16 +276,12 @@ b = QPushButton('Save and Exit')
 b.clicked.connect(save_and_exit)
 cb = QComboBox()
 cb.addItems(["Channel 1 graphed", "Channel 1 NOT graphed"])
-cb.currentIndexChanged.connect(selection_change)
 cb2 = QComboBox()
 cb2.addItems(["Channel 2 graphed", "Channel 2 NOT graphed"])
-cb2.currentIndexChanged.connect(selection_change2)
 cb3 = QComboBox()
 cb3.addItems(["Channel 3 graphed", "Channel 3 NOT graphed"])
-cb3.currentIndexChanged.connect(selection_change3)
 cb4 = QComboBox()
 cb4.addItems(["Channel 4 graphed", "Channel 4 NOT graphed"])
-cb4.currentIndexChanged.connect(selection_change4)
 layout.addWidget(btn)
 layout.addWidget(bt)
 layout.addWidget(b)
