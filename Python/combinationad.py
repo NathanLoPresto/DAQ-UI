@@ -18,10 +18,10 @@ import sys
 from fpga import FPGA
 import pickle as pkl 
 from scipy import signal
+import logging as lg
 
 #Local imports, full of pin locations
 from create_source import adc_list
-
 
 voltage_value = 4.096
 ep = namedtuple('ep', 'addr bits type')
@@ -30,10 +30,8 @@ adc_pll_reset =  ep(0x01, 17, 'wi')
 adc_fifo_reset = ep(0x01, [18,19,20,21], 'wi')
 adc_en0 =   ep(0x01, [12,13,14,15], 'wi')
 v_scaling = 152.6e-6
-
+lg.basicConfig(filename = 'logging_combination.log', encoding = 'utf-8', level=lg.DEBUG)
 data_set = [[],[],[],[]]
-
-#data_set = []
 
 start_time= time.time()
 now = datetime.datetime.now()
@@ -173,33 +171,25 @@ def save_and_exit():
 def main_loop():
     if (f.xem.NoError != f.xem.OpenBySerial("")):
             print ("You can't run the software if no device is detected")
+            lg.debug('Run software buttom was pressed, but was not run' )
             return(False)
     else:
-        
-        if (adc_list[0].used):
-            app= QtWidgets.QApplication(sys.argv)
-            w =  MainWindow(chan=adc_list[0].number)
-            w.show()
-        if (adc_list[1].used):
-            app2 = QtWidgets.QApplication(sys.argv)
-            w2 = MainWindow(chan=adc_list[1].number)
-            w2.show()
-        if (adc_list[2].used):
-            app3 = QtWidgets.QApplication(sys.argv)
-            w3 = MainWindow(chan=adc_list[2].number)
-            w3.show()
-        if (adc_list[3].used):
-            app4 = QtWidgets.QApplication(sys.argv)
-            w4 = MainWindow(chan=adc_list[3].number)
-            w4.show()
-        
+        app= QtWidgets.QApplication(sys.argv)
+        obj_list= []
+        for x in range(len(adc_list)):
+            if (adc_list[x].used):
+                obj = MainWindow(chan=adc_list[x].number)
+                obj_list.append(obj)
+                
+        for y in obj_list:
+            y.show()
+            
         sys.exit(app.exec_())
 
 #Linked to the "exit" button on the main window 
 def ex():
     sys.exit()
 
-#This could be made easier, in a loop with objects
 def selection_change(drop_down):
     return drop_down.currentText()
 
@@ -225,12 +215,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
-
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
         '''if (Istriggered(adc_list[self.chan].trigaddr)):
         '''
         d,s,e =adc_plot(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+        #d =np.array(d)
+        d = signal.decimate(d, adc_list[self.chan].downsample_factor)
         data_set[self.chan].append(d)
         self.x = self.x[1:]  # Remove the first y element.
         a=(self.x[-1]+1)
