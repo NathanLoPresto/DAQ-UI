@@ -2,45 +2,41 @@ import ok
 from fpga import FPGA
 import numpy as np
 import random
-f = FPGA()
-if (False == f.init_device()):
-    raise SystemExit
-    
+import time
+import array as arr
+
+CAPABILITY_CALIBRATION = 0x01
+STATUS_CALIBRATION = 0x01
+BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
-BLOCK_SIZE = 512#bytes
-g_nMemSize=(2*512*1024*1024)
-OK_INTERFACE_UNKNOWN = 0
-OK_INTERFACE_USB2 = 1
-OK_INTERFACE_PCIE = 2
-OK_INTERFACE_USB3 = 3
+g_nMemSize = (8*1024*1024)
+#g_nMemSize=(2*512*1024*1024)
+NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
-print("Generating random data.....")
-g_buf = bytearray(np.asarray(np.ones(BLOCK_SIZE), np.uint8))
-print(g_buf)
-g_nMems=0
-infodev = ok.okTDeviceInfo()
-f.xem.GetDeviceInfo(infodev)
-
+g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
 def writeSDRAM():
-
-    
-    infoDev= ok.okTDeviceInfo()
-    f.xem.GetDeviceInfo(infoDev)
+    print ("Generating random data")
 
     #Reset FIFOs
     f.xem.SetWireInValue(0x00, 0x0004)
     f.xem.UpdateWireIns()
     f.xem.SetWireInValue(0x00, 0x0000)
     f.xem.UpdateWireIns()
+
     #Enable SDRAM write memory transfers
     f.xem.SetWireInValue(0x00, 0x0002)
     f.xem.UpdateWireIns()
+
     print ("Writing to DDR..")
+
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
-        r = f.xem.WriteToPipeIn( epAddr= 0x80, 
-                                      data= g_buf[WRITE_SIZE*i:(WRITE_SIZE*i)+WRITE_SIZE])
+        r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
+                                      data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
+        print("Data size written is: ", r)
+    print ("Done writing")
     f.xem.UpdateWireOuts()
 
 def readSDRAM():
@@ -52,21 +48,30 @@ def readSDRAM():
     #Enable SDRAM write memory transfers
     f.xem.SetWireInValue(0x00, 0x0001)
     f.xem.UpdateWireIns()
-    buf = bytearray(np.asarray(np.empty(BLOCK_SIZE), np.uint8))
     print ("Reading from DDR")
-    while (True):
-        f.xem.UpdateTriggerOuts()
-        if (f.xem.IsTriggered(0xA0, 0x00)):
-            r = f.xem.ReadFromPipeOut(0xA0, data=buf)
-            break
-    print(buf)
-    print ("Read Size: ", r)
-    if (g_buf==buf):
-        print ("DDR3 read/write worked")
+    for i in range ((int)(g_nMemSize/WRITE_SIZE)):
+        r = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
+                                      data= g_rbuf)
+        print ("Length of read data is: ", r)
+        
+    if (g_rbuf==g_buf):
+        print ("the DDR3 read/write worked")
     else:
-        print ("Write doesn't match read, DDR3 failed")
+        print("something went wrong")
+        
+    
+f = FPGA()
+if (False == f.init_device()):
+    raise SystemExit
 
+#Wait for the configuration
+time.sleep(10)
+f.xem.UpdateWireOuts()
+if (f.xem.GetWireOutValue(0x3e)!=0x01):
+    print ("Capability calibration failure, will not continue script")
+    quit()
+if (f.xem.GetWireOutValue(0x20)!=0x01):
+    print ("Status calibration errror, will not continue script")
+    quit()
 writeSDRAM()
 readSDRAM()
-
-
