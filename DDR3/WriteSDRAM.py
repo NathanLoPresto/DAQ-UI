@@ -4,6 +4,8 @@ import numpy as np
 import random
 import time
 import array as arr
+import matplotlib.pyplot as plot
+
 
 CAPABILITY_CALIBRATION = 0x01
 STATUS_CALIBRATION = 0x01
@@ -11,10 +13,21 @@ BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
-#g_nMemSize=(2*512*1024*1024)
+
+#amplitude of the signal in volts
+amplitude_shift=5
+
+#Higher number for slower frequency
+frequency_shift =.25
+
+
 NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
 g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+tim = np.arange(0, 8388608, 1)
+amplitude = (amplitude_shift*np.sin(tim/frequency_shift))
+print ("the length of g_buf is: " , len(g_buf), "and the length of amp is: " , len(amplitude))
+g_buf = bytearray(amplitude)
 g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
 def writeSDRAM():
@@ -37,6 +50,7 @@ def writeSDRAM():
                                       data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
         print("Data size written is: ", r)
     print ("Done writing")
+    print (g_buf[0:124])
     f.xem.UpdateWireOuts()
 
 def readSDRAM():
@@ -58,6 +72,7 @@ def readSDRAM():
         print ("the DDR3 read/write worked")
     else:
         print("something went wrong")
+    print (g_rbuf[0:124])
         
     
 f = FPGA()
