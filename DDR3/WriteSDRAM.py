@@ -24,7 +24,7 @@ def makesinwave(amplitude_shift, frequency_shift):
 
 def writeSDRAM():
     print ("Generating random data")
-
+    start_write = time.time()
     #Reset FIFOs
     f.xem.SetWireInValue(0x00, 0x0004)
     f.xem.UpdateWireIns()
@@ -41,11 +41,16 @@ def writeSDRAM():
         r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
                                       data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
         print("Data size written is: ", r)
+    end_write = time.time()
+    change_write = (end_write - start_write)
+    write_speed = (g_nMemSize/change_write)
+    print ("The speed of the write is: ", write_speed, " bits per second")
     print ("Done writing")
     print (g_buf[0:124])
     f.xem.UpdateWireOuts()
 
 def readSDRAM():
+    start_read = time.time()
     #Reset FIFOs
     f.xem.SetWireInValue(0x00, 0x0004)
     f.xem.UpdateWireIns()
@@ -59,7 +64,10 @@ def readSDRAM():
         r = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
                                       data= g_rbuf)
         print ("Length of read data is: ", r)
-        
+    end_read = time.time()
+    change_read = (end_read - start_read)
+    read_speed = (g_nMemSize/change_read)
+    print ("The speed of the read was: ", read_speed, " bits per second")
     if (g_rbuf==g_buf):
         print ("the DDR3 read/write worked")
     else:
