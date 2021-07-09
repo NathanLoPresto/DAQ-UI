@@ -20,7 +20,7 @@ READBUF_SIZE = (8*1024*1024)
 def makesinwave(amplitude_shift, frequency_shift):
     tim = np.arange (0, WRITE_SIZE, 1)
     amplitude = (amplitude_shift*np.sin(tim*frequency_shift))
-    return amplitude
+    return tim, amplitude
 
 def writeSDRAM():
     print ("Generating random data")
@@ -65,7 +65,16 @@ def readSDRAM():
     else:
         print("something went wrong")
     print (g_rbuf[0:124])
-        
+
+def testplot(x_axis, y_axis):
+    plot.plot(x_axis, y_axis)
+    plot.title('Sinewave')
+    plot.xlabel('time')
+    plot.ylabel('amplitude')
+    plot.grid(True, which = 'both')
+    plot.axhline(y=0, color = 'k')
+    plot.show()
+
 if __name__ == "__main__":
     f = FPGA()
     if (False == f.init_device()):
