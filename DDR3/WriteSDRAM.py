@@ -18,14 +18,14 @@ NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
 
 def make_sin_wave(amplitude_shift, frequency_shift):
-    time_axis = np.arange (0, 50, 1)
+    time_axis = np.arange (0, 2097152, 1)
     amplitude = (amplitude_shift*100*np.sin(time_axis*frequency_shift))
     for x in range (len(amplitude)):
         amplitude[x] = (int)(amplitude[x])
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
-def writeSDRAM(g_buf):
+def writeSDRAM():
 
     start_write = time.time()
     #Reset FIFOs
@@ -48,7 +48,6 @@ def writeSDRAM(g_buf):
     change_write = (end_write - start_write)
     write_speed = (g_nMemSize/change_write)
     print ("The speed of the write is ", write_speed, " bits per second")
-    print (g_buf[0:124])
     f.xem.UpdateWireOuts()
 
 def readSDRAM():
@@ -70,7 +69,6 @@ def readSDRAM():
     change_read = (end_read - start_read)
     read_speed = (g_nMemSize/change_read)
     print ("The speed of the read was: ", read_speed, " bits per second")
-    print (g_rbuf[0:124])
 
 def unpack(buf):
     unpacked_var = []
@@ -96,9 +94,9 @@ if __name__ == "__main__":
     #Wait for the configuration
     time.sleep(10)
     f.xem.UpdateWireOuts()
-    #g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    time_axis, g_buf = make_sin_wave(4,6)
-    g_buf = bytearray(g_buf)
+    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+    time_axis, g_buf_init = make_sin_wave(1,100)
+    g_buf = bytearray(g_buf_init)
     g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
     if (f.xem.GetWireOutValue(0x3e)!=0x01):
@@ -107,8 +105,7 @@ if __name__ == "__main__":
     if (f.xem.GetWireOutValue(0x20)!=0x01):
         print ("Status calibration errror, will not continue script")
         quit()
-    writeSDRAM(g_buf)
+    writeSDRAM()
     readSDRAM()
     unpacked_g_rbuf = unpack(g_rbuf)
-    testplot(time_axis, unpacked_g_rbuf)
-
+    print (unpacked_g_rbuf)
