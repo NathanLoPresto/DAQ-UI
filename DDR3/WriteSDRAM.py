@@ -14,13 +14,6 @@ WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
 
-#amplitude of the signal in volts
-amplitude_shift=5
-
-#Higher number for slower frequency
-frequency_shift =.25
-
-
 NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
 
