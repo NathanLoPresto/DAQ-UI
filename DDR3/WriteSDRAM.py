@@ -22,7 +22,7 @@ def makesinwave(amplitude_shift, frequency_shift):
     amplitude = (amplitude_shift*np.sin(tim*frequency_shift))
     return tim, amplitude
 
-def writeSDRAM():
+def writeSDRAM(g_buf):
 
     start_write = time.time()
     #Reset FIFOs
@@ -96,5 +96,5 @@ if __name__ == "__main__":
     if (f.xem.GetWireOutValue(0x20)!=0x01):
         print ("Status calibration errror, will not continue script")
         quit()
-    writeSDRAM()
+    writeSDRAM(g_buf)
     readSDRAM()
