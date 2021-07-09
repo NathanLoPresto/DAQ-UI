@@ -23,12 +23,11 @@ frequency_shift =.25
 
 NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
-g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-tim = np.arange(0, 8388608, 1)
-amplitude = (amplitude_shift*np.sin(tim/frequency_shift))
-print ("the length of g_buf is: " , len(g_buf), "and the length of amp is: " , len(amplitude))
-g_buf = bytearray(amplitude)
-g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
+
+def makesinwave(amplitude_shift, frequency_shift):
+    tim = np.arange (0, WRITE_SIZE, 1)
+    amplitude = (amplitude_shift*np.sin(tim*frequency_shift))
+    return amplitude
 
 def writeSDRAM():
     print ("Generating random data")
@@ -74,19 +73,23 @@ def readSDRAM():
         print("something went wrong")
     print (g_rbuf[0:124])
         
-    
-f = FPGA()
-if (False == f.init_device()):
-    raise SystemExit
+if __name__ == "__main__":
+    f = FPGA()
+    if (False == f.init_device()):
+        raise SystemExit
 
-#Wait for the configuration
-time.sleep(10)
-f.xem.UpdateWireOuts()
-if (f.xem.GetWireOutValue(0x3e)!=0x01):
-    print ("Capability calibration failure, will not continue script")
-    quit()
-if (f.xem.GetWireOutValue(0x20)!=0x01):
-    print ("Status calibration errror, will not continue script")
-    quit()
-writeSDRAM()
-readSDRAM()
+    #Wait for the configuration
+    time.sleep(10)
+    f.xem.UpdateWireOuts()
+    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+    g_buf = bytearray(makesinwave(4,6))
+    g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
+
+    if (f.xem.GetWireOutValue(0x3e)!=0x01):
+        print ("Capability calibration failure, will not continue script")
+        quit()
+    if (f.xem.GetWireOutValue(0x20)!=0x01):
+        print ("Status calibration errror, will not continue script")
+        quit()
+    writeSDRAM()
+    readSDRAM()
