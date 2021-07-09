@@ -5,7 +5,7 @@ import random
 import time
 import array as arr
 import matplotlib.pyplot as plot
-
+import struct
 
 CAPABILITY_CALIBRATION = 0x01
 STATUS_CALIBRATION = 0x01
@@ -17,10 +17,13 @@ g_nMemSize = (8*1024*1024)
 NUM_TESTS = 10
 READBUF_SIZE = (8*1024*1024)
 
-def makesinwave(amplitude_shift, frequency_shift):
-    tim = np.arange (0, WRITE_SIZE, 1)
-    amplitude = (amplitude_shift*np.sin(tim*frequency_shift))
-    return tim, amplitude
+def make_sin_wave(amplitude_shift, frequency_shift):
+    time_axis = np.arange (0, 50, 1)
+    amplitude = (amplitude_shift*100*np.sin(time_axis*frequency_shift))
+    for x in range (len(amplitude)):
+        amplitude[x] = (int)(amplitude[x])
+    amplitude = amplitude.astype(np.int32)
+    return time_axis, amplitude
 
 def writeSDRAM(g_buf):
 
@@ -69,6 +72,13 @@ def readSDRAM():
     print ("The speed of the read was: ", read_speed, " bits per second")
     print (g_rbuf[0:124])
 
+def unpack(buf):
+    unpacked_var = []
+    print (len(buf))
+    for x in range (50):
+        unpacked_var.append(struct.unpack('i', buf[(x*4):((x+1)*4)]))
+    return unpacked_var
+
 def testplot(x_axis, y_axis):
     plot.plot(x_axis, y_axis)
     plot.title('Sinewave')
@@ -86,8 +96,9 @@ if __name__ == "__main__":
     #Wait for the configuration
     time.sleep(10)
     f.xem.UpdateWireOuts()
-    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    g_buf = bytearray(makesinwave(4,6))
+    #g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+    time_axis, g_buf = make_sin_wave(4,6)
+    g_buf = bytearray(g_buf)
     g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
     if (f.xem.GetWireOutValue(0x3e)!=0x01):
@@ -98,3 +109,6 @@ if __name__ == "__main__":
         quit()
     writeSDRAM(g_buf)
     readSDRAM()
+    unpacked_g_rbuf = unpack(g_rbuf)
+    testplot(time_axis, unpacked_g_rbuf)
+
