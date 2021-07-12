@@ -104,6 +104,30 @@ def testplot(x_axis, y_axis):
     plot.axhline(y=0, color = 'k')
     plot.show()
 
+#given an amplitude and a period, it will write a waveform to the DDR3
+def write_sin_wave (a, b):
+    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+    time_axis, g_buf_init = make_sin_wave(a,b)
+    g_buf = bytearray(g_buf_init)
+    writeSDRAM(g_buf)
+
+#given and amplitude and a period, it will write a step function to the DDR3 
+def write_step_func(a,b):
+    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
+    time_axis, g_buf_init = make_step_function(a,b)
+    g_buf = bytearray(g_buf_init)
+    writeSDRAM(g_buf)
+
+#Reads and prints the contents of the DDR3
+def print_DDR3():
+    g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
+    readSDRAM(g_rbuf)
+    unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
+    for x in range (len(unpacked_g_rbuf)):
+        unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/100)
+    print (unpacked_g_rbuf)
+    testplot(np.arange (0, len(unpacked_g_rbuf), 1), unpacked_g_rbuf)
+
 if __name__ == "__main__":
     f = FPGA()
     if (False == f.init_device()):
@@ -111,22 +135,10 @@ if __name__ == "__main__":
 
     #Wait for the configuration
     time.sleep(3)
-    f.xem.UpdateWireOuts()
-    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    time_axis, g_buf_init = make_step_function(AMP_PARAM,FREQUENCY_PARAM)
-    g_buf = bytearray(g_buf_init)
-    g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
-    if (f.xem.GetWireOutValue(0x3e)!=0x01):
-        print ("Capability calibration failure, will not continue script")
-        quit()
-    if (f.xem.GetWireOutValue(0x20)!=0x01):
-        print ("Status calibration errror, will not continue script")
-        quit()
-    writeSDRAM(g_buf)
-    readSDRAM(g_rbuf)
-    unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
-    for x in range (len(unpacked_g_rbuf)):
-        unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/100)
-    print (unpacked_g_rbuf)
-    testplot(np.arange (0, len(unpacked_g_rbuf), 1), unpacked_g_rbuf)
+    f.xem.UpdateWireOuts()
+    
+    write_sin_wave(10,10)
+    print_DDR3()
+    write_step_func(10,10)
+    print_DDR3()
