@@ -15,10 +15,10 @@ READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
 AXIS_SIZE = (1024*1024*2)
 #Amplitude of the waveform in volts
-AMP_PARAM =1
+AMP_PARAM =10
 
 #Period of the waveform in seconds
-FREQUENCY_PARAM = 20
+FREQUENCY_PARAM = 10
 
 READBUF_SIZE = (8*1024*1024)
 
@@ -26,7 +26,7 @@ def make_step_function(amplitude_shift, frequency_step):
     time_axis = np.arange (0, AXIS_SIZE, 1)
     amplitude = np.arange(0,AXIS_SIZE, 1)
     for x in range (len(amplitude)):
-        if (x%frequency_step<10):
+        if (x%frequency_step<(frequency_step/2)):
             amplitude[x] = (amplitude_shift*100)
         else:
             amplitude[x] = 0
