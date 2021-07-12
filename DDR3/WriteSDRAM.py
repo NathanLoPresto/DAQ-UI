@@ -1,9 +1,7 @@
 import ok
 from fpga import FPGA
 import numpy as np
-import random
 import time
-import array as arr
 import matplotlib.pyplot as plot
 import struct
 
@@ -22,6 +20,7 @@ FREQUENCY_PARAM = 10
 
 READBUF_SIZE = (8*1024*1024)
 
+#given the amplitude, and the time between each step, returns array to be plotted
 def make_step_function(amplitude_shift, frequency_step):
     time_axis = np.arange (0, AXIS_SIZE, 1)
     amplitude = np.arange(0,AXIS_SIZE, 1)
@@ -33,6 +32,7 @@ def make_step_function(amplitude_shift, frequency_step):
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
+#Given the amplitude and period, returns an array to be plotted 
 def make_sin_wave(amplitude_shift, frequency_shift):
     frequency_shift = frequency_shift/np.pi/2
     time_axis = np.arange (0, AXIS_SIZE, 1)
@@ -42,7 +42,8 @@ def make_sin_wave(amplitude_shift, frequency_shift):
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
-def writeSDRAM():
+#given a buffer, it writes a bytearray to the DDR3
+def writeSDRAM(g_buf):
 
     start_write = time.time()
     #Reset FIFOs
@@ -66,7 +67,8 @@ def writeSDRAM():
     print ("The speed of the write was ", (int)(write_speed), " MegaBytes per second")
     f.xem.UpdateWireOuts()
 
-def readSDRAM():
+#reads to an empty array passed to the function
+def readSDRAM(g_rbuf):
     start_read = time.time()
     #Reset FIFOs
     f.xem.SetWireInValue(0x00, 0x0004)
@@ -85,12 +87,14 @@ def readSDRAM():
     read_speed = (1/change_read)
     print ("The speed of the read was ", (int)(read_speed), " MegaBytes per second")
 
+#given a buffer, it unpacks into into human readable float values
 def unpack(buf):
     unpacked_var = []
     for x in range (50):
         unpacked_var.append(struct.unpack('i', buf[(x*4):((x+1)*4)]))
     return unpacked_var
 
+#Given two arrays, plots the x and y axis with hardcoded axis names 
 def testplot(x_axis, y_axis):
     plot.plot(x_axis, y_axis)
     plot.title('Sinewave')
@@ -119,8 +123,8 @@ if __name__ == "__main__":
     if (f.xem.GetWireOutValue(0x20)!=0x01):
         print ("Status calibration errror, will not continue script")
         quit()
-    writeSDRAM()
-    readSDRAM()
+    writeSDRAM(g_buf)
+    readSDRAM(g_rbuf)
     unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
     for x in range (len(unpacked_g_rbuf)):
         unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/100)
