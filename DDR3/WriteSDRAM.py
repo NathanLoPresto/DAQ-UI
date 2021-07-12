@@ -13,7 +13,7 @@ BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
-
+AXIS_SIZE = (1024*1024*2)
 #Amplitude of the waveform in volts
 AMP_PARAM =1
 
@@ -22,9 +22,20 @@ FREQUENCY_PARAM = 20
 
 READBUF_SIZE = (8*1024*1024)
 
+def make_step_function(amplitude_shift, frequency_step):
+    time_axis = np.arange (0, AXIS_SIZE, 1)
+    amplitude = np.arange(0,AXIS_SIZE, 1)
+    for x in range (len(amplitude)):
+        if (x%frequency_step<10):
+            amplitude[x] = (amplitude_shift*100)
+        else:
+            amplitude[x] = 0
+    amplitude = amplitude.astype(np.int32)
+    return time_axis, amplitude
+
 def make_sin_wave(amplitude_shift, frequency_shift):
     frequency_shift = frequency_shift/np.pi/2
-    time_axis = np.arange (0, 2097152, 1)
+    time_axis = np.arange (0, AXIS_SIZE, 1)
     amplitude = (amplitude_shift*100*np.sin(time_axis/frequency_shift))
     for x in range (len(amplitude)):
         amplitude[x] = (int)(amplitude[x])
@@ -98,7 +109,7 @@ if __name__ == "__main__":
     time.sleep(3)
     f.xem.UpdateWireOuts()
     g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    time_axis, g_buf_init = make_sin_wave(AMP_PARAM,FREQUENCY_PARAM)
+    time_axis, g_buf_init = make_step_function(AMP_PARAM,FREQUENCY_PARAM)
     g_buf = bytearray(g_buf_init)
     g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
 
