@@ -13,13 +13,19 @@ BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
-AMP_PARAM =10
-FREQUENCY_PARAM = 100
+
+#Amplitude of the waveform in volts
+AMP_PARAM =1
+
+#Period of the waveform in seconds
+FREQUENCY_PARAM = 20
+
 READBUF_SIZE = (8*1024*1024)
 
 def make_sin_wave(amplitude_shift, frequency_shift):
+    frequency_shift = frequency_shift/np.pi/2
     time_axis = np.arange (0, 2097152, 1)
-    amplitude = (amplitude_shift*100*np.sin(time_axis*frequency_shift))
+    amplitude = (amplitude_shift*100*np.sin(time_axis/frequency_shift))
     for x in range (len(amplitude)):
         amplitude[x] = (int)(amplitude[x])
     amplitude = amplitude.astype(np.int32)
@@ -89,7 +95,7 @@ if __name__ == "__main__":
         raise SystemExit
 
     #Wait for the configuration
-    time.sleep(10)
+    time.sleep(3)
     f.xem.UpdateWireOuts()
     g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
     time_axis, g_buf_init = make_sin_wave(AMP_PARAM,FREQUENCY_PARAM)
