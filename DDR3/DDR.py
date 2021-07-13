@@ -137,6 +137,7 @@ if __name__ == "__main__":
     time.sleep(3)
 
     f.xem.UpdateWireOuts()
+    f.set_wire(0x01, 8)
     write_sin_wave(10,20)
     print_DDR3()
     write_step_func(10,10)
