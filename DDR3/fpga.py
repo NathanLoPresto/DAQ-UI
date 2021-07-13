@@ -28,7 +28,7 @@ PIPE_RESULTS = True
 WIRE_RESULTS = False
 
 class FPGA():
-    def __init__(self, bitfile = 'ramtest.bit'):
+    def __init__(self, bitfile = 'Circular5.bit'):
         self.bitfile = bitfile
         self.i2c = {'m_pBuf': [], 'm_nDataStart': 7}
         return

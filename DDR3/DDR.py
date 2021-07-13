@@ -1,3 +1,4 @@
+from numpy.lib import twodim_base
 import ok
 from fpga import FPGA
 import numpy as np
@@ -25,18 +26,18 @@ def make_step_function(amplitude_shift, frequency_step):
     time_axis = np.arange (0, AXIS_SIZE, 1)
     amplitude = np.arange(0,AXIS_SIZE, 1)
     for x in range (len(amplitude)):
-        if (x%frequency_step<(frequency_step/2)):
-            amplitude[x] = (amplitude_shift*100)
+        if (x%frequency_step<(frequency_step/2) and x<8):
+            amplitude[x] = (amplitude_shift*1000)
         else:
             amplitude[x] = 0
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
 #Given the amplitude and period, returns an array to be plotted 
-def make_sin_wave(amplitude_shift, frequency_shift):
+def make_sin_wave(amplitude_shift, frequency_shift=16):
     frequency_shift = frequency_shift/np.pi/2
-    time_axis = np.arange (0, AXIS_SIZE, 1)
-    amplitude = (amplitude_shift*100*np.sin(time_axis/frequency_shift))
+    time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
+    amplitude = (amplitude_shift*1000*np.sin(time_axis))
     for x in range (len(amplitude)):
         amplitude[x] = (int)(amplitude[x])
     amplitude = amplitude.astype(np.int32)
@@ -90,7 +91,7 @@ def readSDRAM(g_rbuf):
 #given a buffer, it unpacks into into human readable float values
 def unpack(buf):
     unpacked_var = []
-    for x in range (50):
+    for x in range (BLOCK_SIZE):
         unpacked_var.append(struct.unpack('i', buf[(x*4):((x+1)*4)]))
     return unpacked_var
 
@@ -99,16 +100,19 @@ def testplot(x_axis, y_axis):
     plot.plot(x_axis, y_axis)
     plot.title('Sinewave')
     plot.xlabel('time')
-    plot.ylabel('amplitude')
+    plot.ylabel('amplitude (millivolts)')
     plot.grid(True, which = 'both')
     plot.axhline(y=0, color = 'k')
     plot.show()
 
 #given an amplitude and a period, it will write a waveform to the DDR3
-def write_sin_wave (a, b):
-    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    time_axis, g_buf_init = make_sin_wave(a,b)
+def write_sin_wave (a):
+    #g_buf = bytearray(np.asarray(np.ones(1000000), np.uint8))
+    time_axis, g_buf_init = make_sin_wave(a)
+    testplot(time_axis, g_buf_init)
+    #g_buf = bytearray(g_buf_init)
     g_buf = bytearray(g_buf_init)
+    print (len(g_buf))
     writeSDRAM(g_buf)
 
 #given and amplitude and a period, it will write a step function to the DDR3 
@@ -124,18 +128,18 @@ def print_DDR3():
     readSDRAM(g_rbuf)
     unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
     for x in range (len(unpacked_g_rbuf)):
-        unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/100)
-    print (unpacked_g_rbuf)
-    testplot(np.arange (0, len(unpacked_g_rbuf), 1), unpacked_g_rbuf)
+        unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/1000)
+    testplot(np.arange (0, np.pi*2 , (1/512*np.pi*2)), unpacked_g_rbuf)
 
 if __name__ == "__main__":
+
     f = FPGA()
     if (False == f.init_device()):
         raise SystemExit
 
     #Wait for the configuration
     time.sleep(3)
-    f.xem.SetWireInValue(0x01, 0x64)
+    write_sin_wave(1)
+    f.xem.SetWireInValue(0x01, 0xF4240)
     f.xem.UpdateWireIns()
-    write_step_func(10,10)
-    print_DDR3()
+    
