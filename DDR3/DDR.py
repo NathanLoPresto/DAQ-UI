@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     #Wait for the configuration
     time.sleep(3)
-    f.set_wire(0x01, AXIS_SIZE)
-    f.xem.UpdateWireOuts()
+    f.xem.SetWireInValue(0x01, 0x64)
+    f.xem.UpdateWireIns()
     write_step_func(10,10)
     print_DDR3()
