@@ -22,15 +22,16 @@ FREQUENCY_PARAM = 10
 READBUF_SIZE = (8*1024*1024)
 
 #given the amplitude, and the time between each step, returns array to be plotted
-def make_step_function(amplitude_shift, frequency_step):
-    time_axis = np.arange (0, AXIS_SIZE, 1)
-    amplitude = np.arange(0,AXIS_SIZE, 1)
+def make_step_function():
+    time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
+    amplitude = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     for x in range (len(amplitude)):
-        if (x%frequency_step<(frequency_step/2) and x<8):
-            amplitude[x] = (amplitude_shift*1000)
+        if (x<(len(amplitude)/2)):
+            amplitude[x] = (10000)
         else:
             amplitude[x] = 0
     amplitude = amplitude.astype(np.int16)
+    testplot(time_axis, amplitude)
     return time_axis, amplitude
 
 #Given the amplitude and period, returns an array to be plotted 
@@ -39,8 +40,11 @@ def make_sin_wave(amplitude_shift, frequency_shift=16):
     amplitude = (amplitude_shift*1000*np.sin(time_axis))
     y = len(amplitude)
     for x in range (y):
-        amplitude[x]= amplitude[x]+(amplitude_shift*1000)
+        amplitude[x]= amplitude[x]+(10000)
+    for x in range (y):
+        amplitude[x]= (int)(amplitude[x]/20000*16384)
     amplitude = amplitude.astype(np.int16)
+    testplot(time_axis, amplitude)
     return time_axis, amplitude
 
 #given a buffer, it writes a bytearray to the DDR3
@@ -60,7 +64,17 @@ def writeSDRAM(g_buf):
     for i in range ((int)(len(g_buf)/WRITE_SIZE)):
         r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
                                       data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
+        print ("The length of the write is ", r)
+
+    #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
+    f.xem.SetWireInValue(0x03, 0x0004)
+    f.xem.UpdateWireIns()
+    f.xem.SetWireInValue(0x03, 0x0000)
+    f.xem.UpdateWireIns()
+    #Enable SDRAM write memory transfers
+    f.xem.SetWireInValue(0x03, 0x0001)
+    f.xem.UpdateWireIns()
 
 #reads to an empty array passed to the function
 def readSDRAM(g_rbuf):
@@ -77,6 +91,7 @@ def readSDRAM(g_rbuf):
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
         r = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
                                       data= g_rbuf)
+        print ("The length of the read is:", r)
     end_read = time.time()
     change_read = (end_read - start_read)
     read_speed = (1/change_read)
@@ -93,7 +108,7 @@ def unpack(buf):
 #Given two arrays, plots the x and y axis with hardcoded axis names 
 def testplot(x_axis, y_axis):
     plot.plot(x_axis, y_axis)
-    plot.title('Sinewave')
+    plot.title('The outputted wave should look like this')
     plot.xlabel('time')
     plot.ylabel('amplitude (millivolts)')
     plot.grid(True, which = 'both')
@@ -103,14 +118,12 @@ def testplot(x_axis, y_axis):
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
     time_axis, g_buf_init = make_sin_wave(a)
-    testplot(time_axis, g_buf_init)
     g_buf = bytearray(g_buf_init)
     writeSDRAM(g_buf)
 
 #given and amplitude and a period, it will write a step function to the DDR3 
-def write_step_func(a,b):
-    g_buf = bytearray(np.asarray(np.ones(g_nMemSize), np.uint8))
-    time_axis, g_buf_init = make_step_function(a,b)
+def write_step_func():
+    time_axis, g_buf_init = make_step_function()
     g_buf = bytearray(g_buf_init)
     writeSDRAM(g_buf)
 
@@ -124,18 +137,18 @@ def print_DDR3():
     testplot(np.arange (0, 1000000, 1), unpacked_g_rbuf)
 
 if __name__ == "__main__":
+
     f = FPGA()
     if (False == f.init_device()):
         raise SystemExit
     #Wait for the configuration
     time.sleep(3)
-    f.xem.SetWireInValue(0x04, 0xFFFF)
+
+    f.xem.SetWireInValue(0x04, 0x969925)
     f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x02, 0x080, 0xFE00 )
+
+    #Sample rate speed, to bits 18:9
+    f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    a,b = make_sin_wave(2)
-    print ("The length of a set from the sin wave is", len(b))
-    testbyte = bytearray(b)
-    print ("The length of byterray set of amplitude is ", len(testbyte))
-    print ("Each piece of data written to the bytearray is ", len(testbyte)/len(b), "bytes long")
-    write_sin_wave(1)
+    write_sin_wave(3)
+    
