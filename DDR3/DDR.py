@@ -30,50 +30,48 @@ def make_step_function(amplitude_shift, frequency_step):
             amplitude[x] = (amplitude_shift*1000)
         else:
             amplitude[x] = 0
-    amplitude = amplitude.astype(np.int32)
+    amplitude = amplitude.astype(np.int16)
     return time_axis, amplitude
 
 #Given the amplitude and period, returns an array to be plotted 
 def make_sin_wave(amplitude_shift, frequency_shift=16):
-    frequency_shift = frequency_shift/np.pi/2
     time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     amplitude = (amplitude_shift*1000*np.sin(time_axis))
-    amplitude = amplitude.astype(np.int32)
+    y = len(amplitude)
+    for x in range (y):
+        amplitude[x]= amplitude[x]+(amplitude_shift*1000)
+    amplitude = amplitude.astype(np.int16)
     return time_axis, amplitude
 
 #given a buffer, it writes a bytearray to the DDR3
 def writeSDRAM(g_buf):
 
-    start_write = time.time()
+    print ("Length of buffer at the top of WriteSDRAM", len(g_buf))
     #Reset FIFOs
-    f.xem.SetWireInValue(0x00, 0x0004)
+    f.xem.SetWireInValue(0x03, 0x0004)
     f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x00, 0x0000)
+    f.xem.SetWireInValue(0x03, 0x0000)
     f.xem.UpdateWireIns()
 
     #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x00, 0x0002)
+    f.xem.SetWireInValue(0x03, 0x0002)
     f.xem.UpdateWireIns()
     print ("Writing to DDR...")
-    for i in range ((int)(g_nMemSize/WRITE_SIZE)):
+    for i in range ((int)(len(g_buf)/WRITE_SIZE)):
         r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
                                       data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
-    end_write = time.time()
-    change_write = (end_write - start_write)
-    write_speed = (1/change_write)
-    print ("The speed of the write was ", (int)(write_speed), " MegaBytes per second")
     f.xem.UpdateWireOuts()
 
 #reads to an empty array passed to the function
 def readSDRAM(g_rbuf):
     start_read = time.time()
     #Reset FIFOs
-    f.xem.SetWireInValue(0x00, 0x0004)
+    f.xem.SetWireInValue(0x03, 0x0004)
     f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x00, 0x0000)
+    f.xem.SetWireInValue(0x03, 0x0000)
     f.xem.UpdateWireIns()
     #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x00, 0x0001)
+    f.xem.SetWireInValue(0x03, 0x0001)
     f.xem.UpdateWireIns()
     print ("Reading from DDR...")
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
@@ -104,7 +102,6 @@ def testplot(x_axis, y_axis):
 
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
-    #g_buf = bytearray(np.asarray(np.ones(1000000), np.uint8))
     time_axis, g_buf_init = make_sin_wave(a)
     testplot(time_axis, g_buf_init)
     g_buf = bytearray(g_buf_init)
@@ -132,6 +129,13 @@ if __name__ == "__main__":
         raise SystemExit
     #Wait for the configuration
     time.sleep(3)
-    write_sin_wave(1)
-    f.xem.SetWireInValue(0x01, 0xFFFF)
+    f.xem.SetWireInValue(0x04, 0xFFFF)
     f.xem.UpdateWireIns()
+    f.xem.SetWireInValue(0x02, 0x080, 0xFE00 )
+    f.xem.UpdateWireIns()
+    a,b = make_sin_wave(2)
+    print ("The length of a set from the sin wave is", len(b))
+    testbyte = bytearray(b)
+    print ("The length of byterray set of amplitude is ", len(testbyte))
+    print ("Each piece of data written to the bytearray is ", len(testbyte)/len(b), "bytes long")
+    write_sin_wave(1)
