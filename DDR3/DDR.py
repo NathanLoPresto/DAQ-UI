@@ -44,7 +44,6 @@ def make_sin_wave(amplitude_shift, frequency_shift=16):
     for x in range (y):
         amplitude[x]= (int)(amplitude[x]/20000*16384)
     amplitude = amplitude.astype(np.int16)
-    testplot(time_axis, amplitude)
     return time_axis, amplitude
 
 #given a buffer, it writes a bytearray to the DDR3
@@ -118,14 +117,16 @@ def testplot(x_axis, y_axis):
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
     time_axis, g_buf_init = make_sin_wave(a)
-    g_buf = bytearray(g_buf_init)
-    writeSDRAM(g_buf)
+    testplot(time_axis, g_buf_init)
+    pass_buf = bytearray(g_buf_init)
+    writeSDRAM(pass_buf)
 
 #given and amplitude and a period, it will write a step function to the DDR3 
 def write_step_func():
     time_axis, g_buf_init = make_step_function()
-    g_buf = bytearray(g_buf_init)
-    writeSDRAM(g_buf)
+    testplot(time_axis, g_buf_init)
+    pass_buf2 = bytearray(g_buf_init)
+    writeSDRAM(pass_buf2)
 
 #Reads and prints the contents of the DDR3
 def print_DDR3():
@@ -150,5 +151,6 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_sin_wave(3)
+    write_step_func()
+
     
