@@ -26,11 +26,8 @@ def make_step_function():
     time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     amplitude = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     for x in range (len(amplitude)):
-        if (x<(len(amplitude)/2)):
-            amplitude[x] = (10000)
-        else:
-            amplitude[x] = 0
-    amplitude = amplitude.astype(np.int16)
+        amplitude[x] =10000
+    amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
 #Given the amplitude and period, returns an array to be plotted 
@@ -42,7 +39,7 @@ def make_sin_wave(amplitude_shift, frequency_shift=16):
         amplitude[x]= amplitude[x]+(10000)
     for x in range (y):
         amplitude[x]= (int)(amplitude[x]/20000*16384)
-    amplitude = amplitude.astype(np.int16)
+    amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
 #given a buffer, it writes a bytearray to the DDR3
@@ -150,4 +147,6 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_step_func()
+    write_sin_wave(10)
+
+
