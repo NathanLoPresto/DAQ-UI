@@ -31,7 +31,6 @@ def make_step_function():
         else:
             amplitude[x] = 0
     amplitude = amplitude.astype(np.int16)
-    testplot(time_axis, amplitude)
     return time_axis, amplitude
 
 #Given the amplitude and period, returns an array to be plotted 
@@ -152,5 +151,3 @@ if __name__ == "__main__":
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
     write_step_func()
-
-    
