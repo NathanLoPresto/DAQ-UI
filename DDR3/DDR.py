@@ -9,12 +9,12 @@ BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
-
+sample_size = (524288)
 
 #given the amplitude, and the time between each step, returns array to be plotted
 def make_flat_voltage(input_voltage):
-    time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
-    amplitude = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
+    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
+    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
     for x in range (len(amplitude)):
         amplitude[x] = input_voltage
     amplitude = amplitude.astype(np.int32)
@@ -22,13 +22,16 @@ def make_flat_voltage(input_voltage):
 
 #Given the amplitude and period, returns an array to be plotted 
 def make_sin_wave(amplitude_shift, frequency_shift=16):
-    time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
+    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
+    print ("length of time axis after creation ", len(time_axis))
     amplitude = (amplitude_shift*1000*np.sin(time_axis))
     y = len(amplitude)
     for x in range (y):
         amplitude[x]= amplitude[x]+(10000)
     for x in range (y):
         amplitude[x]= (int)(amplitude[x]/20000*16384)
+    for x in range(y):
+        amplitude[x] = amplitude[x]+5000
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
@@ -46,10 +49,11 @@ def writeSDRAM(g_buf):
     f.xem.SetWireInValue(0x03, 0x0002)
     f.xem.UpdateWireIns()
     print ("Writing to DDR...")
-    for i in range ((int)(len(g_buf)/WRITE_SIZE)):
-        r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
-                                      data= g_buf[(WRITE_SIZE*i):((WRITE_SIZE*i)+WRITE_SIZE)])
-        print ("The length of the write is ", r)
+    time1 = time.time()
+    #for i in range ((int)(len(g_buf)/WRITE_SIZE)):
+    r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
+                                      data= g_buf[0:(len(g_buf))])
+    print ("The length of the write is ", r)
 
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
@@ -62,31 +66,26 @@ def writeSDRAM(g_buf):
     f.xem.UpdateWireIns()
 
 #reads to an empty array passed to the function
-def readSDRAM(g_rbuf):
-    start_read = time.time()
+def readSDRAM():
+    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
+    pass_buf = bytearray(amplitude)
     #Reset FIFOs
-    f.xem.SetWireInValue(0x03, 0x0004)
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x03, 0x0000)
-    f.xem.UpdateWireIns()
-    #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x03, 0x0001)
-    f.xem.UpdateWireIns()
     print ("Reading from DDR...")
+    time1 = time.time()
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
         r = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
-                                      data= g_rbuf)
+                                      data= pass_buf)
         print ("The length of the read is:", r)
-    end_read = time.time()
-    change_read = (end_read - start_read)
-    read_speed = (1/change_read)
-    print ("The speed of the read was ", (int)(read_speed), " MegaBytes per second")
-    return g_rbuf
+    time2 = time.time()
+    time3  = (time2-time1)
+    mbs = (int)(64 / time3)
+    print ("The speed of the read was ", mbs, " MegaBytes per second")
+    return pass_buf
 
 #given a buffer, it unpacks into into human readable float values
 def unpack(buf):
     unpacked_var = []
-    for x in range (1000000):
+    for x in range (sample_size):
         unpacked_var.append(struct.unpack('i', buf[(x*4):((x+1)*4)]))
     return unpacked_var
 
@@ -103,25 +102,23 @@ def testplot(x_axis, y_axis):
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
     time_axis, g_buf_init = make_sin_wave(a)
-    testplot(time_axis, g_buf_init)
+    print ("The length of the array before casting ", len(g_buf_init))
     pass_buf = bytearray(g_buf_init)
     writeSDRAM(pass_buf)
 
 #given and amplitude and a period, it will write a step function to the DDR3 
 def write_flat_voltage(input_voltage):
     time_axis, g_buf_init = make_flat_voltage(input_voltage)
-    #testplot(time_axis, g_buf_init)
     pass_buf2 = bytearray(g_buf_init)
     writeSDRAM(pass_buf2)
 
 #Reads and prints the contents of the DDR3
 def print_DDR3():
-    g_rbuf = bytearray(np.asarray(np.zeros(READ_SIZE), np.uint8))
-    g_rbuf = readSDRAM(g_rbuf)
+    g_rbuf = readSDRAM()
     unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
     for x in range (len(unpacked_g_rbuf)):
         unpacked_g_rbuf[x] = (unpacked_g_rbuf[x]/1000)
-    testplot(np.arange (0, 1000000, 1), unpacked_g_rbuf)
+    testplot(np.arange (0, sample_size, 1), unpacked_g_rbuf)
 
 if __name__ == "__main__":
 
@@ -131,13 +128,12 @@ if __name__ == "__main__":
     #Wait for the configuration
     time.sleep(3)
 
-    #f.xem.SetWireInValue(0x04, 0x969925)
-    f.xem.SetWireInValue(0x04, 0xFF)
+    factor = (int)(sample_size/8)
+    f.xem.SetWireInValue(0x04, factor)
+    #f.xem.SetWireInValue(0x04, 0xFF)
     f.xem.UpdateWireIns()
 
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_flat_voltage(8192)
-
-
+    write_sin_wave(3)
