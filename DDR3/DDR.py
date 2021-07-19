@@ -1,4 +1,3 @@
-from numpy.lib import twodim_base
 import ok
 from fpga import FPGA
 import numpy as np
@@ -6,23 +5,14 @@ import time
 import matplotlib.pyplot as plot
 import struct
 
-CAPABILITY_CALIBRATION = 0x01
-STATUS_CALIBRATION = 0x01
 BLOCK_SIZE = 512
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
-AXIS_SIZE = (1024*1024*2)
-#Amplitude of the waveform in volts
-AMP_PARAM =10
 
-#Period of the waveform in seconds
-FREQUENCY_PARAM = 10
-
-READBUF_SIZE = (8*1024*1024)
 
 #given the amplitude, and the time between each step, returns array to be plotted
-def make_step_function(input_voltage):
+def make_flat_voltage(input_voltage):
     time_axis = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     amplitude = np.arange (0, np.pi*2 , (1/1000000*2/np.pi) )
     for x in range (len(amplitude)):
@@ -118,15 +108,15 @@ def write_sin_wave (a):
     writeSDRAM(pass_buf)
 
 #given and amplitude and a period, it will write a step function to the DDR3 
-def write_step_func(input_voltage):
-    time_axis, g_buf_init = make_step_function(input_voltage)
+def write_flat_voltage(input_voltage):
+    time_axis, g_buf_init = make_flat_voltage(input_voltage)
     #testplot(time_axis, g_buf_init)
     pass_buf2 = bytearray(g_buf_init)
     writeSDRAM(pass_buf2)
 
 #Reads and prints the contents of the DDR3
 def print_DDR3():
-    g_rbuf = bytearray(np.asarray(np.zeros(READBUF_SIZE), np.uint8))
+    g_rbuf = bytearray(np.asarray(np.zeros(READ_SIZE), np.uint8))
     g_rbuf = readSDRAM(g_rbuf)
     unpacked_g_rbuf = np.array(unpack(g_rbuf)).astype('float64')
     for x in range (len(unpacked_g_rbuf)):
@@ -148,6 +138,6 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_step_func(8192)
+    write_flat_voltage(8192)
 
 
