@@ -131,7 +131,7 @@ def print_DDR3():
 
 if __name__ == "__main__":
 
-    f = FPGA()
+    f = FPGA(bitfile = 'SlowClkDDR.bit')
     if (False == f.init_device()):
         raise SystemExit
     #Wait for the configuration

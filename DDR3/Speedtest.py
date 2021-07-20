@@ -93,7 +93,7 @@ def write_sin_wave (a):
 
 if __name__ == "__main__":
 
-    f = FPGA(bitfile = 'Withpipeout.bit')
+    f = FPGA(bitfile = 'Speedtest.bit')
     if (False == f.init_device()):
         raise SystemExit
     #Wait for the configuration
