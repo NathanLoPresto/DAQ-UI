@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plot
 import struct
 
-BLOCK_SIZE = 512
+BLOCK_SIZE = (16384)
 WRITE_SIZE=(8*1024*1024)
 READ_SIZE = (8*1024*1024)
 g_nMemSize = (8*1024*1024)
@@ -54,6 +54,11 @@ def writeSDRAM(g_buf):
     r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
                                       data= g_buf[0:(len(g_buf))])
     print ("The length of the write is ", r)
+    
+    time2 = time.time()
+    time3  = (time2-time1)
+    mbs = (int)(r/1024/1024/ time3)
+    print ("The speed of the write was ", mbs, " MegaBytes per second")
 
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
@@ -67,19 +72,23 @@ def writeSDRAM(g_buf):
 
 #reads to an empty array passed to the function
 def readSDRAM():
-    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
+    amplitude = np.zeros((sample_size,), dtype=int)
     pass_buf = bytearray(amplitude)
     #Reset FIFOs
+    #below sets the HDL into read mode
+    f.xem.UpdateWireOuts()
+    f.xem.SetWireInValue(0x03, 0x0004)
+    f.xem.UpdateWireIns()
+    f.xem.SetWireInValue(0x03, 0x0000)
+    f.xem.UpdateWireIns()
+    #Enable SDRAM write memory transfers
+    f.xem.SetWireInValue(0x03, 0x0001)
+    f.xem.UpdateWireIns()
     print ("Reading from DDR...")
-    time1 = time.time()
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
         r = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
                                       data= pass_buf)
         print ("The length of the read is:", r)
-    time2 = time.time()
-    time3  = (time2-time1)
-    mbs = (int)(64 / time3)
-    print ("The speed of the read was ", mbs, " MegaBytes per second")
     return pass_buf
 
 #given a buffer, it unpacks into into human readable float values
@@ -127,7 +136,6 @@ if __name__ == "__main__":
         raise SystemExit
     #Wait for the configuration
     time.sleep(3)
-
     factor = (int)(sample_size/8)
     f.xem.SetWireInValue(0x04, factor)
     #f.xem.SetWireInValue(0x04, 0xFF)
