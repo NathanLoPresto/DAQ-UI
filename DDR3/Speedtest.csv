@@ -1,18 +1,7 @@
-Read/Write speeds in MB/s with block length 512
-105,103,103
-239,222,248
-Read/Write speeds in MB/s with block length 1024
-133,129,127
-290,254,274
-Read/Write speeds in MB/s with block length 2048
-196,173,179
-251,274,274
-Read/Write speeds in MB/s with block length 4096
-226,249,224
-248,277,297
-Read/Write speeds in MB/s with block length 8192
-262,260,250
-271,243,272
-Read/Write speeds in MB/s with block length 16384
-280,274,274
-298,285,266
+Block Size (bytes): ,512,1024,2048,4096,8192,16384,512,1024,2048,4096,8192,16384
+Read test 1: ,101,130,194,238,260,292
+Read test 2: ,103,129,195,223,305,301
+Read test 3: ,104,127,182,234,275,308
+Write test 1: ,273,254,263,259,265,288
+Write test 2: ,281,271,280,240,283,275
+Write test 3: ,244,227,289,278,295,258

@@ -106,27 +106,34 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    Header = ["Read/Write speeds in MB/s with block length 512",
-    "Read/Write speeds in MB/s with block length 1024",
-    "Read/Write speeds in MB/s with block length 2048",
-    "Read/Write speeds in MB/s with block length 4096",
-    "Read/Write speeds in MB/s with block length 8192",
-    "Read/Write speeds in MB/s with block length 16384",]
-    write_speed = []
-    read_speed = []
+    Header = ["Block Size (bytes): ", 512, 1024, 2048, 4096, 8192, 16384]
+    write_speed = ["Write test 1: "]
+    write_speed2 = ["Write test 2: "]
+    write_speed3 = ["Write test 3: "]
+    read_speed = ["Read test 1: "]
+    read_speed2 = ["Read test 2: "]
+    read_speed3 = ["Read test 3: "]
+    average_write = ["Average write"]
+    average_read = ["Average read"]
     for x in range (6):
-        BLOCK_SIZE = (512*(2**(x))) 
-        for y in range (3):
-            write_speed.append(write_sin_wave(3))
-            read_speed.append(readSDRAM())
+        BLOCK_SIZE = (512*(2**(x)))
+        Header.append(BLOCK_SIZE)
+        write_speed.append(write_sin_wave(3))
+        read_speed.append(readSDRAM())
+        write_speed2.append(write_sin_wave(3))
+        read_speed2.append(readSDRAM())
+        write_speed3.append(write_sin_wave(3))
+        read_speed3.append(readSDRAM())
 
     with open('Speedtest.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
 
-        for x in range (6):
-            # write the header
-            writer.writerow(Header[x:(x+1)])
-            writer.writerow(read_speed[(x*3):((x+1)*3)])
-            writer.writerow(write_speed[(x*3):((x+1)*3)])
+        writer.writerow(Header)
+        writer.writerow(read_speed)
+        writer.writerow(read_speed2)
+        writer.writerow(read_speed3)
+        writer.writerow(write_speed)
+        writer.writerow(write_speed2)
+        writer.writerow(write_speed3)
 
