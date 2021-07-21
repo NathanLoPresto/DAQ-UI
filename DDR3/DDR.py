@@ -13,8 +13,8 @@ sample_size = (524288)
 
 #given the amplitude, and the time between each step, returns array to be plotted
 def make_flat_voltage(input_voltage):
-    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
-    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2/np.pi) )
+    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
+    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
     for x in range (len(amplitude)):
         amplitude[x] = input_voltage
     amplitude = amplitude.astype(np.int32)
@@ -131,7 +131,7 @@ def print_DDR3():
 
 if __name__ == "__main__":
 
-    f = FPGA(bitfile = 'SlowClkDDR.bit')
+    f = FPGA(bitfile = 'OldVersion2.bit')
     if (False == f.init_device()):
         raise SystemExit
     #Wait for the configuration
@@ -144,4 +144,7 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_sin_wave(3)
+    write_flat_voltage(10000)
+    time.sleep(2)
+    f.xem.UpdateWireOuts()
+    print (f.xem.GetWireOutValue(0x3E))
