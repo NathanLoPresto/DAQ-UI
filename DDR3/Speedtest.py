@@ -107,14 +107,14 @@ if __name__ == "__main__":
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
     Header = ["Block Size (bytes): "]
-    write_speed = ["Write test 1: "]
-    write_speed2 = ["Write test 2: "]
-    write_speed3 = ["Write test 3: "]
-    read_speed = ["Read test 1: "]
-    read_speed2 = ["Read test 2: "]
-    read_speed3 = ["Read test 3: "]
-    average_write = ["Average write"]
-    average_read = ["Average read"]
+    write_speed = ["Write test 1(MB/s): "]
+    write_speed2 = ["Write test 2(MB/s): "]
+    write_speed3 = ["Write test 3(MB/s): "]
+    read_speed = ["Read test 1(MB/s): "]
+    read_speed2 = ["Read test 2(MB/s): "]
+    read_speed3 = ["Read test 3(MB/s): "]
+    average_write = ["Average write(MB/s):"]
+    average_read = ["Average read(MB/s):"]
     for x in range (6):
         BLOCK_SIZE = (512*(2**(x)))
         Header.append(BLOCK_SIZE)
@@ -124,7 +124,11 @@ if __name__ == "__main__":
         read_speed2.append(readSDRAM())
         write_speed3.append(write_sin_wave(3))
         read_speed3.append(readSDRAM())
-
+    for x in range (6):
+        y = (int)(((int)(read_speed[x+1])+(int)(read_speed2[x+1])+(int)(read_speed3[x+1]))/3)
+        average_read.append(y)
+        x = (int)(((int)(write_speed[x+1])+(int)(write_speed2[x+1])+(int)(write_speed3[x+1]))/3)
+        average_write.append(x)
     with open('Speedtest.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
@@ -136,4 +140,7 @@ if __name__ == "__main__":
         writer.writerow(write_speed)
         writer.writerow(write_speed2)
         writer.writerow(write_speed3)
+        writer.writerow(average_read)
+        writer.writerow(average_write)
+
 
