@@ -106,7 +106,7 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    Header = ["Block Size (bytes): ", 512, 1024, 2048, 4096, 8192, 16384]
+    Header = ["Block Size (bytes): "]
     write_speed = ["Write test 1: "]
     write_speed2 = ["Write test 2: "]
     write_speed3 = ["Write test 3: "]
