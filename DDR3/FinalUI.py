@@ -21,8 +21,8 @@ import ok
 ep                = namedtuple('ep', 'number addr used downsample_factor')
 ad5453            = ep(0, 0xA0, True,  1)
 ad7960            = ep(1, 0xA1, True,  1)
-ads7952           = ep(2, 0,    False, 1)
-ads8686           = ep(3, 0,    False, 1)
+ads7952           = ep(2, 0xA0, False, 1)
+ads8686           = ep(3, 0xA0, False, 1)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
