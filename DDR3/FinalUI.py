@@ -19,11 +19,11 @@ import ok
 
 #Input your values for adc address, if used, and downsample factor
 ep                = namedtuple('ep', 'number addr used downsample_factor')
-adc1              = ep(0, 0xA0, True,  1)
-adc2              = ep(1, 0xA1, True,  1)
-adc3              = ep(2, 0, False, 1)
-adc4              = ep(3, 0, False, 1)
-adc_list          = [adc1, adc2, adc3, adc4]
+ad5453            = ep(0, 0xA0, True,  1)
+ad7960            = ep(1, 0xA1, True,  1)
+ads7952           = ep(2, 0,    False, 1)
+ads8686           = ep(3, 0,    False, 1)
+adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
@@ -33,14 +33,15 @@ save_json         = 'C:/Users/nalo1/Downloads/Metadata'
 start_time        = time.time()
 now               = datetime.datetime.now()
 current_time      = now.strftime("%H_%M_%S")
-sample_size       = (524288)
-BLOCK_SIZE        = (16384)
-WRITE_SIZE        = (8*1024*1024)
-transfer_length   = (4096)
-g_nMemSize        = (8*1024*1024)
 pipe_addr_list    = [0x80, 0x80]
 data_set          = [[],[],[],[]]
-v_scaling         = 152.6e-6
+
+SAMPLE_SIZE       = (524288)
+BLOCK_SIZE        = (16384)
+WRITE_SIZE        = (8*1024*1024)
+TRANSFER_LENGTH   = (4096)
+G_NMEMSIZE        = (8*1024*1024)
+V_SCALING         = 152.6e-6
 
 #Creates both an HDF5 file with data, and JSON with metadata
 def filemaker():
@@ -85,9 +86,9 @@ def convert_data(buf):
 
 #Read from pipe-out, returns a float-array for graphing
 def adc_return(fpga, adc_chan = 0, filename = None, PLT = False):
-    s,e       = fpga.read_pipe_out(addr_offset = adc_chan, data_len=transfer_length)
+    s,e       = fpga.read_pipe_out(addr_offset = adc_chan, data_len=TRANSFER_LENGTH)
     d         = convert_data(s)
-    r         = (d*v_scaling)
+    r         = (d*V_SCALING)
     return r
 
 #returns a dictionary of metadata for JSON file creation
@@ -113,7 +114,7 @@ def save_and_exit():
 
 #Given the amplitude and period, returns an array to be plotted 
 def make_sin_wave(amplitude_shift):
-    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
+    time_axis = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
     amplitude = (amplitude_shift*1000*np.sin(time_axis))
     y = len(amplitude)
     for x in range (y):
@@ -128,8 +129,8 @@ def make_sin_wave(amplitude_shift):
 
 #Given a single 14-bit value, writes full data set at that DAC value
 def make_flat_voltage(input_voltage):
-    time_axis = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
-    amplitude = np.arange (0, np.pi*2 , (1/sample_size*2*np.pi) )
+    time_axis = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
+    amplitude = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
     for x in range (len(amplitude)):
         amplitude[x] = input_voltage
     amplitude = amplitude.astype(np.int32)
