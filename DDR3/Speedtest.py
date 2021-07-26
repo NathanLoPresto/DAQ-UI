@@ -132,10 +132,10 @@ if __name__ == "__main__":
         write_speed3.append(write_sin_wave(3))
         read_speed3.append(readSDRAM())
     for x in range (6):
-        y = (int)(((int)(read_speed[x+2])+(int)(read_speed2[x+1])+(int)(read_speed3[x+2]))/3)
+        y = (int)(((int)(read_speed[x+2])+(int)(read_speed2[x+2])+(int)(read_speed3[x+2]))/3)
         average_read.append(y)
-        x = (int)(((int)(write_speed[x+2])+(int)(write_speed2[x+1])+(int)(write_speed3[x+2]))/3)
-        average_write.append(x)
+        b = (int)(((int)(write_speed[x+2])+(int)(write_speed2[x+2])+(int)(write_speed3[x+2]))/3)
+        average_write.append(b)
     with open('Speedtest.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
