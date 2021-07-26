@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from pyqtgraph import PlotWidget, plot
 from collections import namedtuple
 from PyQt5.QtWidgets import * 
+from threading import Thread
 from PyQt5.QtCore import * 
 from PyQt5.QtGui import *
 from scipy import signal
@@ -42,6 +43,18 @@ WRITE_SIZE        = (8*1024*1024)
 TRANSFER_LENGTH   = (4096)
 G_NMEMSIZE        = (8*1024*1024)
 V_SCALING         = 152.6e-6
+
+class myThread(Thread):
+    def __init__(self, value):
+        Thread.__init__(self)
+        self.value = value
+
+    def run(self):
+        if (self.value==2):
+            threadtwo()
+
+def threadtwo():
+    b = input("Here is the input into the second thread: ")
 
 #Creates both an HDF5 file with data, and JSON with metadata
 def filemaker():
@@ -146,7 +159,6 @@ def writeSDRAM(g_buf, address):
 
     r = f.xem.WriteToBlockPipeIn( epAddr= address, blockSize= BLOCK_SIZE,
                                       data= g_buf[0:(len(g_buf))])
-    print ("Written length was: ", r)
 
     #below sets the HDL into read mode
     f.set_wire(0x03, 4)
@@ -216,7 +228,10 @@ if __name__ == "__main__":
         raise SystemExit
             # reset PLL 
 
-    #This will eventually be moved to the input script
+    Secondthread = myThread(2)
+    Secondthread.start()
+
+     #This will eventually be moved to the input script
     input_list = []
     input_list.append(make_sin_wave(3))
     input_list.append(make_flat_voltage(10000))
@@ -227,4 +242,3 @@ if __name__ == "__main__":
 
     input("Press Enter to start")
     main_loop()
-
