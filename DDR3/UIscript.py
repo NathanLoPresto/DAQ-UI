@@ -20,6 +20,12 @@ ads7952           = ep(2, 0xA0, True, 1)
 ads8686           = ep(3, 0xA0, True, 1)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
+ad5453_update     = ad5453.used
+ad7960_update     = ad7960.used
+ad7952_update     = ads7952.used
+ad8686_update     = ads8686.used
+update_list       = [ad5453_update,ad7960_update,ad7952_update,ad8686_update]
+
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
@@ -32,7 +38,7 @@ run_flag          = threading.Event()
 current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = [[],[],[],[]]
-d                 = [4]
+d                 = 4
 
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
@@ -93,17 +99,16 @@ def get_meta_data():
     return meta_dict
 
 #Creates 4 graphing windows if enabled, sends pinter to ADC namedtuple
-def main_loop(choice=2):
-
+def main_loop():
     if (f.xem.NoError != f.xem.OpenBySerial("")):
             print ("You can't run the software if no device is detected")
             return(False)
     else:
         app= QtWidgets.QApplication(sys.argv)
         obj_list = []
-        for x in range(1):
-            if (adc_list[choice].used):
-                obj = MainWindow(chan=adc_list[choice].number)
+        for x in range(len(adc_list)):
+            if (adc_list[x].used):
+                obj = MainWindow(chan=adc_list[x].number)
                 obj_list.append(obj)
         print(threading.current_thread())        
         for y in obj_list:
@@ -114,7 +119,7 @@ def main_loop(choice=2):
 #Qt5 window class, to be initializaed upon call to main loop
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self,chan, *args, **kwargs):
+    def __init__(self,chan,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.chan=chan
         self.clock_divider =0
@@ -134,18 +139,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        data_set[self.chan].append(d)
-        self.clock_divider+=1
-        if (self.clock_divider==10):
-            self.clock_divider=0
+        if (ad7952_update):
+            constant=1
             #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
-            self.x = self.x[1:]  # Remove the first y element.
-            a=(self.x[-1]+1)
-            self.x.append(a)
-            self.y = self.y[1:]  # Remove the first
-            self.y = np.append(self.y, np.mean(d))
-            self.data_line.setData(self.x, self.y)
+            data_set[self.chan].append(d)
+            self.clock_divider+=1
+            if (self.clock_divider==10):
+                self.clock_divider=0
+                self.x = self.x[1:]  # Remove the first y element.
+                a=(self.x[-1]+1)
+                self.x.append(a)
+                self.y = self.y[1:]  # Remove the first
+                self.y = np.append(self.y, np.mean(constant*d))
+                self.data_line.setData(self.x, self.y)
      
 #Given a buffer and DDR address, writes to SDRAM
 def writeSDRAM(g_buf, address):
@@ -212,21 +219,33 @@ def write_sin_wave(voltage):
 
 #Used at any time to update the HDF5 file with the data collected
 def save_data():
-    print("Saving data")
+    print("Saving data...")
     filemaker()
+    print ("Data saved to: ", save_hdf5)
+
+#Used to change the SPI clockedge 
+def change_clock():
+    f.xem.WriteRegister(0x80000010, 0x00003410)
+    f.xem.ActivateTriggerIn(0x40, 8)
+    print("Clocking edge changed")
+
+#changes the scaling of the outputs
+def change_scaling(x):
+    global d
+    d=x
+
+#ADC changes
+def stop_ADC():
+    global ad7952_update
+    ad7952_update = False
 
 '''
 End of command block, main loop to start thread and set wire ins
 '''
 
-def make_new_graph(x):
-    Threadthree = threading.Thread(target=main_loop(x))
-    Threadthree.start()
-
 if __name__ == "__main__":
     Secondthread = threading.Thread(target=main_loop)
     Secondthread.start()
-    
     #Wait for the configuration
     time.sleep(3)
 
@@ -239,7 +258,4 @@ if __name__ == "__main__":
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
 
-    #changes the edge of the clcok
-    f.xem.WriteRegister(0x80000010, 0x00003410)
-    f.xem.ActivateTriggerIn(0x40, 8)
     
