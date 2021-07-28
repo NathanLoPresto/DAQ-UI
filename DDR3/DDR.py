@@ -41,8 +41,6 @@ def make_sin_wave(amplitude_shift, frequency_shift=16):
         amplitude[x]= amplitude[x]+(10000)
     for x in range (y):
         amplitude[x]= (int)(amplitude[x]/20000*16384)
-    for x in range(y):
-        amplitude[x] = amplitude[x]+5000
     amplitude = amplitude.astype(np.int32)
     return time_axis, amplitude
 
@@ -135,7 +133,7 @@ def send_trig(ep_bit):
 
 if __name__ == "__main__":
 
-    f = FPGA(bitfile = 'pipe1.bit')
+    f = FPGA(bitfile = '728.bit')
     if (False == f.init_device()):
         raise SystemExit
         
@@ -149,10 +147,12 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
-    write_flat_voltage(10922)
-    time.sleep(2)
+    write_sin_wave(2)
+    f.xem.WriteRegister(0x80000010, 0x00003410)
+    f.xem.ActivateTriggerIn(0x40, 8)
     #f.xem.UpdateWireOuts()
     #print (f.xem.GetWireOutValue(0x3E))
+
     '''
     time.sleep(2)
     dacs = [1,2,3,4]

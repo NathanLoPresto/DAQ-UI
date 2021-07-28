@@ -93,18 +93,19 @@ def get_meta_data():
     return meta_dict
 
 #Creates 4 graphing windows if enabled, sends pinter to ADC namedtuple
-def main_loop():
+def main_loop(choice=2):
+
     if (f.xem.NoError != f.xem.OpenBySerial("")):
             print ("You can't run the software if no device is detected")
             return(False)
     else:
         app= QtWidgets.QApplication(sys.argv)
         obj_list = []
-        for x in range(len(adc_list)):
-            if (adc_list[x].used):
-                obj = MainWindow(chan=adc_list[x].number)
+        for x in range(1):
+            if (adc_list[choice].used):
+                obj = MainWindow(chan=adc_list[choice].number)
                 obj_list.append(obj)
-                
+        print(threading.current_thread())        
         for y in obj_list:
             y.show()
             
@@ -170,8 +171,6 @@ def make_sin_wave(amplitude_shift):
         amplitude[x] = amplitude[x]+(10000)
     for x in range (y):
         amplitude[x] = (int)(amplitude[x]/20000*16384)
-    for x in range(y):
-        amplitude[x] = amplitude[x]+5000
     amplitude = amplitude.astype(np.int32)
     byteamp = bytearray(amplitude)
     return byteamp
@@ -220,6 +219,9 @@ def save_data():
 End of command block, main loop to start thread and set wire ins
 '''
 
+def make_new_graph(x):
+    Threadthree = threading.Thread(target=main_loop(x))
+    Threadthree.start()
 
 if __name__ == "__main__":
     Secondthread = threading.Thread(target=main_loop)
@@ -236,7 +238,8 @@ if __name__ == "__main__":
     #Sample rate speed, to bits 18:9
     f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
     f.xem.UpdateWireIns()
+
+    #changes the edge of the clcok
+    f.xem.WriteRegister(0x80000010, 0x00003410)
+    f.xem.ActivateTriggerIn(0x40, 8)
     
-
-
-
