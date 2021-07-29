@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from collections import namedtuple
+from scipy import signal
 import multiprocessing
 import pyqtgraph as pg
 import numpy as np
@@ -14,10 +15,10 @@ import os
 
 #Input your values for adc address, if used, and downsample factor
 ep                = namedtuple('ep', 'number addr used downsample_factor')
-ad5453            = ep(0, 0xA0, True,  1)
-ad7960            = ep(1, 0xA1, True,  1)
-ads7952           = ep(2, 0xA0, True, 1)
-ads8686           = ep(3, 0xA0, True, 1)
+ad5453            = ep(0, 0xA0, False,  1)
+ad7960            = ep(1, 0xA1, False,  1)
+ads7952           = ep(2, 0xA0, False, 1)
+ads8686           = ep(3, 0xA5, True, 1)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 ad5453_update     = ad5453.used
@@ -38,7 +39,6 @@ run_flag          = threading.Event()
 current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = [[],[],[],[]]
-d                 = 4
 
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
@@ -139,10 +139,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        if (ad7952_update):
-            constant=1
-            #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+        if (f.xem.IsTriggered(0x60, 0xFFFF)):
+            d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             self.clock_divider+=1
             if (self.clock_divider==10):
@@ -151,7 +150,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 a=(self.x[-1]+1)
                 self.x.append(a)
                 self.y = self.y[1:]  # Remove the first
-                self.y = np.append(self.y, np.mean(constant*d))
+                self.y = np.append(self.y, np.mean(d))
                 self.data_line.setData(self.x, self.y)
      
 #Given a buffer and DDR address, writes to SDRAM
