@@ -3,6 +3,7 @@ from collections import namedtuple
 from scipy import signal
 import multiprocessing
 import pyqtgraph as pg
+from fpga import FPGA 
 import numpy as np
 import threading
 import datetime
@@ -30,6 +31,7 @@ update_list       = [ad5453_update,ad7960_update,ad7952_update,ad8686_update]
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
+bitfile_used      = '728.bit'
 
 #Data_Set should add more rows if more ADC inputs
 start_time        = time.time()
@@ -40,6 +42,7 @@ current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = [[],[],[],[]]
 
+USER_SCALING      = 1
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
 WRITE_SIZE        = (8*1024*1024)
@@ -47,6 +50,12 @@ TRANSFER_LENGTH   = (4096)
 G_NMEMSIZE        = (8*1024*1024)
 V_SCALING         = 152.6e-6
 
+#Initialize the FPGA for calls to "f"
+def config():
+    f = FPGA(bitfile = bitfile_used)
+    if (False == f.init_device()):
+        print("Configuration failed")
+    return f
 
 #Used as a twos_comp converter for the convert_data function
 def twos_comp(val, bits):
@@ -109,8 +118,7 @@ def main_loop():
         for x in range(len(adc_list)):
             if (adc_list[x].used):
                 obj = MainWindow(chan=adc_list[x].number)
-                obj_list.append(obj)
-        print(threading.current_thread())        
+                obj_list.append(obj)     
         for y in obj_list:
             y.show()
             
@@ -139,19 +147,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        if (f.xem.IsTriggered(0x60, 0xFFFF)):
-            d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
-            data_set[self.chan].append(d)
-            self.clock_divider+=1
-            if (self.clock_divider==10):
-                self.clock_divider=0
-                self.x = self.x[1:]  # Remove the first y element.
-                a=(self.x[-1]+1)
-                self.x.append(a)
-                self.y = self.y[1:]  # Remove the first
-                self.y = np.append(self.y, np.mean(d))
-                self.data_line.setData(self.x, self.y)
+        #Eventual trigger line here
+        d  = 6
+        #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+        #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+        data_set[self.chan].append(d)
+        self.clock_divider+=1
+        if (self.clock_divider==10):
+            self.clock_divider=0
+            self.x = self.x[1:]  # Remove the first y element.
+            a=(self.x[-1]+1)
+            self.x.append(a)
+            self.y = self.y[1:]  # Remove the first
+            self.y = np.append(self.y, np.mean(d)*USER_SCALING)
+            self.data_line.setData(self.x, self.y)
      
 #Given a buffer and DDR address, writes to SDRAM
 def writeSDRAM(g_buf, address):
@@ -230,8 +239,8 @@ def change_clock():
 
 #changes the scaling of the outputs
 def change_scaling(x):
-    global d
-    d=x
+    global USER_SCALING
+    USER_SCALING=x
 
 #ADC changes
 def stop_ADC():
@@ -243,6 +252,7 @@ End of command block, main loop to start thread and set wire ins
 '''
 
 if __name__ == "__main__":
+    f=config()
     Secondthread = threading.Thread(target=main_loop)
     Secondthread.start()
     #Wait for the configuration
