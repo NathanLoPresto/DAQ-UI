@@ -4,7 +4,7 @@
 
 The objective of the project was to create a UI for a general-purpose operational amplifier centered around electrophysiology experimentation. This includes reading data from a host of ADCs, storing the data into hierarchical data formats, displaying the data in real-time graphing windows and assembling components of the project into a single human-runnable script. In tandem with Dr. Koerner’s ongoing project and the electrophysiology department at the University of Richmond, my codebase and overall design would be open-source, making it free and readily usable for the general public.
 
-![image](https://user-images.githubusercontent.com/78660740/127667619-ca08f3fb-837b-4213-801d-e51b9a6d49d7.png){:height="36px" width="36px"}.
+![image](https://user-images.githubusercontent.com/78660740/127667619-ca08f3fb-837b-4213-801d-e51b9a6d49d7.png){:height="36px" width="36px"}
 
 
 
