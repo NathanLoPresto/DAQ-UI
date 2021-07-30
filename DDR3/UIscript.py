@@ -15,11 +15,11 @@ import sys
 import os
 
 #Input your values for adc address, if used, and downsample factor
-ep                = namedtuple('ep', 'number addr used downsample_factor')
-ad5453            = ep(0, 0xA0, False,  1)
-ad7960            = ep(1, 0xA1, False,  1)
-ads7952           = ep(2, 0xA0, False, 1)
-ads8686           = ep(3, 0xA5, True, 1)
+ep                = namedtuple('ep', 'number addr used downsample_factor trig_addr')
+ad5453            = ep(0, 0xA0, False,  1, 0x01)
+ad7960            = ep(1, 0xA1, False,  1, 0x01)
+ads7952           = ep(2, 0xA0, False,  1, 0x01)
+ads8686           = ep(3, 0xA5, True,   1, 0x60)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
@@ -141,7 +141,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
         if (adc_list[self.chan].used):
-            #Eventual trigger line here
+            #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
             d  = 6
             #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
@@ -240,11 +240,13 @@ def change_scaling(scaling):
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
-    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, False, adc_list[channel].downsample_factor )
+    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, False, adc_list[channel].downsample_factor,
+    adc_list[channel].trig_addr )
     
 #Given a paused ADC channel, it will resume the graphing and data retention
 def resume_ADC(channel):
-    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, True, adc_list[channel].downsample_factor )
+    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, True, adc_list[channel].downsample_factor,
+    adc_list[channel].trig_addr )
 
 #Given two integer values, will chnage the update speed of the graph for a specific channel
 def change_update_speed(factor, channel):
