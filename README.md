@@ -14,10 +14,10 @@ When conducting speed tests (below), the best way to automate the process was wi
 
 **Acknowledgements**
 ***
-Special thanks to:
--Lucas J. Koerner
--University of St. Thomas Engineering Department
--Undergraduate Research Opportunities Program
--Young Scholars Grant
--Coresearchers: Corissa, Ian, Abe & Jake
+Special thanks to: <br />
+-Lucas J. Koerner <br />
+-University of St. Thomas Engineering Department <br />
+-Undergraduate Research Opportunities Program <br />
+-Young Scholars Grant <br />
+-Coresearchers: Corissa, Ian, Abe & Jake <br />
 
