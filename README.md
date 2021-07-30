@@ -12,7 +12,7 @@ The applications of this project extend deep into the electrophysiology communit
 ***
 When conducting speed tests (below), the best way to automate the process was with a Python script cycling though transfer sizes and returning transfer time elapsed. This value could divide the returned transfer size and write a speed in MB/s to a CSV file. With multiple tests and a relatively seamless process, results were conclusive and clear that FIFO transfer sizes closest to 16kB yielded that fastest transfer speed.
 
-![test image size] <img src="https://user-images.githubusercontent.com/78660740/127703939-505e441f-8625-467c-a1ab-aa91157dd2dc.png" width = "400" height = "790">
+![test image size] <img src="https://user-images.githubusercontent.com/78660740/127703939-505e441f-8625-467c-a1ab-aa91157dd2dc.png" width = "400" height = "240">
 
 
 ***
