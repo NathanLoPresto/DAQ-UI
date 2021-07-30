@@ -35,8 +35,8 @@ save_flag         = threading.Event()
 run_flag          = threading.Event()
 current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
-data_set          = [[],[],[],[]]
-clock_divs        = [10, 10, 10, 10]
+data_set          = []
+clock_divs        = []
 clock_divider     = 0
 
 USER_SCALING      = 1
@@ -46,6 +46,12 @@ WRITE_SIZE        = (8*1024*1024)
 TRANSFER_LENGTH   = (4096)
 G_NMEMSIZE        = (8*1024*1024)
 V_SCALING         = 152.6e-6
+
+#makes the dataset scalable 
+def create_dataset():
+    for x in range (len(adc_list)):
+        data_set.append([])
+        clock_divs.append(10)
 
 #Initialize the FPGA for calls to "f"
 def config():
@@ -264,6 +270,7 @@ End of command block, main loop to start thread and set wire ins
 
 if __name__ == "__main__":
     f=config()
+    create_dataset()
     GRAPHING_THREAD = threading.Thread(target=main_loop)
     GRAPHING_THREAD.start()
 
