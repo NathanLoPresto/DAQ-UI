@@ -16,9 +16,9 @@ import os
 
 #Input your values for adc address, if used, and downsample factor
 ep                = namedtuple('ep', 'number addr used downsample_factor trig_addr')
-ad5453            = ep(0, 0xA0, False,  1, 0x01)
-ad7960            = ep(1, 0xA1, False,  1, 0x01)
-ads7952           = ep(2, 0xA0, False,  1, 0x01)
+ad5453            = ep(0, 0xA0, True,  1, 0x01)
+ad7960            = ep(1, 0xA1, True,  1, 0x01)
+ads7952           = ep(2, 0xA0, True,  1, 0x01)
 ads8686           = ep(3, 0xA5, True,   1, 0x60)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
@@ -37,7 +37,7 @@ current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = []
 clock_divs        = []
-clock_divider     = 0
+clock_divider     = []
 
 USER_SCALING      = 1
 SAMPLE_SIZE       = (524288)
@@ -52,6 +52,7 @@ def create_dataset():
     for x in range (len(adc_list)):
         data_set.append([])
         clock_divs.append(10)
+        clock_divider.append(0)
 
 #Initialize the FPGA for calls to "f"
 def config():
@@ -117,10 +118,12 @@ def main_loop():
             return(False)
     else:
         app= QtWidgets.QApplication(sys.argv)
+        obj_list = []
         for x in range(len(adc_list)):
             if (adc_list[x].used):
                 obj = MainWindow(chan=adc_list[x].number)
                 obj.show()
+                obj_list.append(obj)
 
         app.exec_()
 
@@ -153,9 +156,9 @@ class MainWindow(QtWidgets.QMainWindow):
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             global clock_divider
-            clock_divider+=1
-            if (clock_divider==clock_divs[self.chan]):
-                clock_divider=0
+            clock_divider[self.chan]+=1
+            if (clock_divider[self.chan]==clock_divs[self.chan]):
+                clock_divider[self.chan]=0
                 self.x = self.x[1:]  # Remove the first y element.
                 a=(self.x[-1]+1)
                 self.x.append(a)
@@ -258,7 +261,7 @@ def resume_ADC(channel):
 def change_update_speed(factor, channel):
     clock_divs[channel] = factor
     global clock_divider
-    clock_divider =0
+    clock_divider[channel] =0
 
 #Given a string, it iwll append it to the notes eventually dumped into the JSON file
 def add_note(note):
