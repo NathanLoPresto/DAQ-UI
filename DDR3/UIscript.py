@@ -22,12 +22,6 @@ ads7952           = ep(2, 0xA0, False, 1)
 ads8686           = ep(3, 0xA5, True, 1)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
-ad5453_update     = ad5453.used
-ad7960_update     = ad7960.used
-ad7952_update     = ads7952.used
-ad8686_update     = ads8686.used
-update_list       = [ad5453_update,ad7960_update,ad7952_update,ad8686_update]
-
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
@@ -147,20 +141,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #Call to trig_check()  for interval, default is set to 0 ns
     def update_plot_data(self):
-        #Eventual trigger line here
-        d  = 6
-        #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-        #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
-        data_set[self.chan].append(d)
-        self.clock_divider+=1
-        if (self.clock_divider==10):
-            self.clock_divider=0
-            self.x = self.x[1:]  # Remove the first y element.
-            a=(self.x[-1]+1)
-            self.x.append(a)
-            self.y = self.y[1:]  # Remove the first
-            self.y = np.append(self.y, np.mean(d)*USER_SCALING)
-            self.data_line.setData(self.x, self.y)
+        if (adc_list[self.chan].used):
+            #Eventual trigger line here
+            d  = 6
+            #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+            data_set[self.chan].append(d)
+            self.clock_divider+=1
+            if (self.clock_divider==10):
+                self.clock_divider=0
+                self.x = self.x[1:]  # Remove the first y element.
+                a=(self.x[-1]+1)
+                self.x.append(a)
+                self.y = self.y[1:]  # Remove the first
+                self.y = np.append(self.y, np.mean(d)*USER_SCALING)
+                self.data_line.setData(self.x, self.y)
      
 #Given a buffer and DDR address, writes to SDRAM
 def writeSDRAM(g_buf, address):
@@ -171,7 +166,10 @@ def writeSDRAM(g_buf, address):
 
     r = f.xem.WriteToBlockPipeIn( epAddr= address, blockSize= BLOCK_SIZE,
                                       data= g_buf[0:(len(g_buf))])
-    print (r)
+    if (r>0):
+        print("Write was a success")
+    else:
+        print ("Write was a failure")
     #below sets the HDL into read mode
     f.set_wire(0x03, 4)
     f.set_wire(0x03, 0)
@@ -242,10 +240,13 @@ def change_scaling(x):
     global USER_SCALING
     USER_SCALING=x
 
-#ADC changes
-def stop_ADC():
-    global ad7952_update
-    ad7952_update = False
+#Given, the graphing channel, pick which channel to stop pulling data and graphing from 
+def stop_ADC(x):
+    adc_list[x]= ep(adc_list[x].number, adc_list[x].addr, False, adc_list[x].downsample_factor )
+    
+#Given a paused ADC channel, it will resume the graphing and data retention
+def resume_ADC(x):
+    adc_list[x]= ep(adc_list[x].number, adc_list[x].addr, True, adc_list[x].downsample_factor )
 
 '''
 End of command block, main loop to start thread and set wire ins
