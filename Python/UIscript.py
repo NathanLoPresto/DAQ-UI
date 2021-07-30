@@ -25,7 +25,7 @@ adc_list          = [ad5453, ad7960, ads7952, ads8686]
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
-bitfile_used      = '728.bit'
+bitfile_used      = 'bitfile.bit'
 notes             = []
 
 #Data_Set should add more rows if more ADC inputs
