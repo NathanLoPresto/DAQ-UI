@@ -14,7 +14,7 @@ When conducting speed tests (below), the best way to automate the process was wi
 
 **Acknowledgements**
 ***
-Special thanks to: <br />
+*Special thanks to:* <br />
 -Lucas J. Koerner <br />
 -University of St. Thomas Engineering Department <br />
 -Undergraduate Research Opportunities Program <br />
