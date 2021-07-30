@@ -26,6 +26,7 @@ adc_list          = [ad5453, ad7960, ads7952, ads8686]
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
 bitfile_used      = '728.bit'
+notes             = []
 
 #Data_Set should add more rows if more ADC inputs
 start_time        = time.time()
@@ -35,6 +36,8 @@ run_flag          = threading.Event()
 current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = [[],[],[],[]]
+clock_divs        = [10, 10, 10, 10]
+clock_divider     = 0
 
 USER_SCALING      = 1
 SAMPLE_SIZE       = (524288)
@@ -65,7 +68,6 @@ def twos_comp(val, bits):
     else:
         return twos_comp_scalar(val, bits)
 
-
 #Given a buffer from the read_pipe, converts into float-type for graphing
 def convert_data(buf):
     bits = 16 # for AD7961 
@@ -82,10 +84,10 @@ def convert_data(buf):
 
 #Read from pipe-out, returns a float-array for graphing
 def adc_return(fpga, adc_chan = 0, filename = None, PLT = False):
-    s,e       = fpga.read_pipe_out(addr_offset = adc_chan, data_len=TRANSFER_LENGTH)
-    d         = convert_data(s)
-    r         = (d*V_SCALING)
-    return r
+    RAW_DATA,unused        = fpga.read_pipe_out(addr_offset = adc_chan, data_len=TRANSFER_LENGTH)
+    CONVERTED_DATA         = convert_data(RAW_DATA)
+    SCALED_DATA            = (CONVERTED_DATA*V_SCALING)
+    return SCALED_DATA
 
 #returns a dictionary of metadata for JSON file creation
 def get_meta_data():
@@ -97,7 +99,8 @@ def get_meta_data():
         "Product Serial Number" : f.xem.GetSerialNumber(),
         "Device ID"             : f.xem.GetDeviceID(),
         "OS"                    : platform.system(),
-        "OS Version"            : platform.version()
+        "OS Version"            : platform.version(),
+        "Notes"                 : notes
     }
     return meta_dict
 
@@ -108,14 +111,11 @@ def main_loop():
             return(False)
     else:
         app= QtWidgets.QApplication(sys.argv)
-        obj_list = []
         for x in range(len(adc_list)):
             if (adc_list[x].used):
                 obj = MainWindow(chan=adc_list[x].number)
-                obj_list.append(obj)     
-        for y in obj_list:
-            y.show()
-            
+                obj.show()
+
         app.exec_()
 
 #Qt5 window class, to be initializaed upon call to main loop
@@ -124,7 +124,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self,chan,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.chan=chan
-        self.clock_divider =0
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.x = list(range(100))  # 100 time points
@@ -147,9 +146,10 @@ class MainWindow(QtWidgets.QMainWindow):
             #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
-            self.clock_divider+=1
-            if (self.clock_divider==10):
-                self.clock_divider=0
+            global clock_divider
+            clock_divider+=1
+            if (clock_divider==clock_divs[self.chan]):
+                clock_divider=0
                 self.x = self.x[1:]  # Remove the first y element.
                 a=(self.x[-1]+1)
                 self.x.append(a)
@@ -179,10 +179,9 @@ def writeSDRAM(g_buf, address):
 def make_sin_wave(amplitude_shift):
     time_axis = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
     amplitude = (amplitude_shift*1000*np.sin(time_axis))
-    y = len(amplitude)
-    for x in range (y):
+    for x in range (len(amplitude)):
         amplitude[x] = amplitude[x]+(10000)
-    for x in range (y):
+    for x in range (len(amplitude)):
         amplitude[x] = (int)(amplitude[x]/20000*16384)
     amplitude = amplitude.astype(np.int32)
     byteamp = bytearray(amplitude)
@@ -190,7 +189,6 @@ def make_sin_wave(amplitude_shift):
 
 #Given a single 14-bit value, writes full data set at that DAC value
 def make_flat_voltage(input_voltage):
-    time_axis = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
     amplitude = np.arange (0, np.pi*2 , (1/SAMPLE_SIZE*2*np.pi) )
     for x in range (len(amplitude)):
         amplitude[x] = input_voltage
@@ -200,15 +198,15 @@ def make_flat_voltage(input_voltage):
 
 #Creates both an HDF5 file with data, and JSON with metadata
 def filemaker():
-    nom = os.path.join(save_hdf5,"OPAMPDATA" + (str)(current_time)+ ".hdf5")
-    hf  = h5py.File(nom, 'w')
+    hdf5_name = os.path.join(save_hdf5,"OPAMPDATA" + (str)(current_time)+ ".hdf5")
+    hf  = h5py.File(hdf5_name, 'w')
     for x in adc_list:
         hf.create_dataset((str)((str)(x)+ "dataset"), data=data_set[x.number])
     hf.close()
 
     data = get_meta_data()
-    nom2 = os.path.join(save_json,'metadata' + (str) (current_time) + ".json")
-    with open (nom2, 'w') as outfile:
+    json_name = os.path.join(save_json,'metadata' + (str) (current_time) + ".json")
+    with open (json_name, 'w') as outfile:
         json.dump(data, outfile)
 
 '''
@@ -236,17 +234,27 @@ def change_clock():
     print("Clocking edge changed")
 
 #changes the scaling of the outputs
-def change_scaling(x):
+def change_scaling(scaling):
     global USER_SCALING
-    USER_SCALING=x
+    USER_SCALING=scaling
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
-def stop_ADC(x):
-    adc_list[x]= ep(adc_list[x].number, adc_list[x].addr, False, adc_list[x].downsample_factor )
+def stop_ADC(channel):
+    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, False, adc_list[channel].downsample_factor )
     
 #Given a paused ADC channel, it will resume the graphing and data retention
-def resume_ADC(x):
-    adc_list[x]= ep(adc_list[x].number, adc_list[x].addr, True, adc_list[x].downsample_factor )
+def resume_ADC(channel):
+    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, True, adc_list[channel].downsample_factor )
+
+#Given two integer values, will chnage the update speed of the graph for a specific channel
+def change_update_speed(factor, channel):
+    clock_divs[channel] = factor
+    global clock_divider
+    clock_divider =0
+
+#Given a string, it iwll append it to the notes eventually dumped into the JSON file
+def add_note(note):
+    notes.append(note)
 
 '''
 End of command block, main loop to start thread and set wire ins
@@ -254,18 +262,15 @@ End of command block, main loop to start thread and set wire ins
 
 if __name__ == "__main__":
     f=config()
-    Secondthread = threading.Thread(target=main_loop)
-    Secondthread.start()
+    GRAPHING_THREAD = threading.Thread(target=main_loop)
+    GRAPHING_THREAD.start()
+
     #Wait for the configuration
     time.sleep(3)
 
-    #Set the HDL indexing value
+    #Set the HDL indexing value, and HDL sampling rate
     factor = (int)(SAMPLE_SIZE/8)
-    f.xem.SetWireInValue(0x04, factor)
-    f.xem.UpdateWireIns()
-
-    #Sample rate speed, to bits 18:9
-    f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
-    f.xem.UpdateWireIns()
+    f.set_wire(0x04, factor)
+    f.set_wire(0x02, 0x0000A000, 0x0003FF00 )
 
     
