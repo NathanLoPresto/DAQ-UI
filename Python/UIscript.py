@@ -1,7 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from collections import namedtuple
 from scipy import signal
-import multiprocessing
 import pyqtgraph as pg
 from fpga import FPGA 
 import numpy as np
@@ -14,21 +13,20 @@ import h5py
 import sys
 import os
 
-#Input your values for adc address, if used, and downsample factor
+#All(except ep) inputted by the user before running the script
 ep                = namedtuple('ep', 'number addr used downsample_factor trig_addr')
 ad5453            = ep(0, 0xA0, True,  1, 0x01)
 ad7960            = ep(1, 0xA1, True,  1, 0x01)
 ads7952           = ep(2, 0xA0, True,  1, 0x01)
-ads8686           = ep(3, 0xA5, True,   1, 0x60)
+ads8686           = ep(3, 0xA5, True,  1, 0x60)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
 bitfile_used      = 'bitfile.bit'
-notes             = []
 
-#Data_Set should add more rows if more ADC inputs
+#Pipe address list needs to be finalized and put into SDWrite
 start_time        = time.time()
 now               = datetime.datetime.now()
 save_flag         = threading.Event()
@@ -39,15 +37,16 @@ data_set          = []
 clock_divs        = []
 clock_divider     = []
 user_scaling      = []
+notes             = []
 
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
 WRITE_SIZE        = (8*1024*1024)
 TRANSFER_LENGTH   = (4096)
 G_NMEMSIZE        = (8*1024*1024)
-V_SCALING         = 152.6e-6
+V_SCALING         = (152.6e-6)
 
-#makes the dataset scalable 
+#makes the dataset scalable, needs to be called by main
 def create_dataset():
     for x in range (len(adc_list)):
         data_set.append([])
@@ -112,7 +111,7 @@ def get_meta_data():
     }
     return meta_dict
 
-#Creates 4 graphing windows if enabled, sends pinter to ADC namedtuple
+#Called by mainthread to create a graphing window for each ADC listed
 def main_loop():
     if (f.xem.NoError != f.xem.OpenBySerial("")):
             print ("You can't run the software if no device is detected")
@@ -128,7 +127,7 @@ def main_loop():
 
         app.exec_()
 
-#Qt5 window class, to be initializaed upon call to main loop
+#graphing window class, called by each object instantiation
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self,chan,*args, **kwargs):
@@ -148,7 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
-    #Call to trig_check()  for interval, default is set to 0 ns
+    #Eventual call to IsTriggered()
     def update_plot_data(self):
         if (adc_list[self.chan].used):
             #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
