@@ -1,15 +1,15 @@
-import ok
+import matplotlib.pyplot as plot
 from fpga import FPGA
 import numpy as np
-import time
-import matplotlib.pyplot as plot
 import struct
+import time
 import csv
+import ok
 
-BLOCK_SIZE = (16384)
-WRITE_SIZE=(8*1024*1024)
-READ_SIZE = (8*1024*1024)
-g_nMemSize = (8*1024*1024)
+BLOCK_SIZE  = (16384)
+WRITE_SIZE  = (8*1024*1024)
+READ_SIZE   = (8*1024*1024)
+g_nMemSize  = (8*1024*1024)
 sample_size = (524288)
 
 
@@ -31,14 +31,9 @@ def make_sin_wave(amplitude_shift, frequency_shift=16):
 def writeSDRAM(g_buf):
 
     #Reset FIFOs
-    f.xem.SetWireInValue(0x03, 0x0004)
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x03, 0x0000)
-    f.xem.UpdateWireIns()
-
-    #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x03, 0x0002)
-    f.xem.UpdateWireIns()
+    f.set_wire(0x03, 0x0004)
+    f.set_wire(0x03, 0x0000)
+    f.set_wire(0x03, 0x0002)
     time1 = time.time()
     #for i in range ((int)(len(g_buf)/WRITE_SIZE)):
     r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
@@ -51,16 +46,11 @@ def writeSDRAM(g_buf):
     else:
         mbs = (int)(r/1024/1024/ time3)
 
-
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
-    f.xem.SetWireInValue(0x03, 0x0004)
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x03, 0x0000)
-    f.xem.UpdateWireIns()
-    #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x03, 0x0001)
-    f.xem.UpdateWireIns()
+    f.set_wire(0x03, 0x0004)
+    f.set_wire(0x03, 0x0000)
+    f.set_wire(0x03, 0x0001)
     return mbs
 
 #reads to an empty array passed to the function
@@ -70,13 +60,9 @@ def readSDRAM():
     #Reset FIFOs
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
-    f.xem.SetWireInValue(0x03, 0x0004)
-    f.xem.UpdateWireIns()
-    f.xem.SetWireInValue(0x03, 0x0000)
-    f.xem.UpdateWireIns()
-    #Enable SDRAM write memory transfers
-    f.xem.SetWireInValue(0x03, 0x0001)
-    f.xem.UpdateWireIns()
+    f.set_wire(0x03, 0x0004)
+    f.set_wire(0x03, 0x0000)
+    f.set_wire(0x03, 0x0001)
     time1 = time.time()
 
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
@@ -106,22 +92,18 @@ if __name__ == "__main__":
     #Wait for the configuration
     time.sleep(3)
     factor = (int)(sample_size/8)
-    f.xem.SetWireInValue(0x04, factor)
-    #f.xem.SetWireInValue(0x04, 0xFF)
-    f.xem.UpdateWireIns()
-
-    #Sample rate speed, to bits 18:9
-    f.xem.SetWireInValue(0x02, 0x0000A000, 0x0003FF00 )
-    f.xem.UpdateWireIns()
-    Header = ["Read/Write", "Test Number"]
-    write_speed = ["Write", 1]
-    write_speed2 = ["Write", 2]
-    write_speed3 = ["Write", 3]
-    read_speed = ["Read", 1]
-    read_speed2 = ["Read", 2]
-    read_speed3 = ["Read", 3]
+    f.set_wire(0x04, factor)
+    f.set_wire(0x02, 0x0000A000, 0x0003FF00 )
+  
+    Header        = ["Read/Write", "Test Number"]
+    write_speed   = ["Write", 1]
+    write_speed2  = ["Write", 2]
+    write_speed3  = ["Write", 3]
+    read_speed    = ["Read", 1]
+    read_speed2   = ["Read", 2]
+    read_speed3   = ["Read", 3]
     average_write = ["Average write", 1]
-    average_read = ["Average read", 1]
+    average_read  = ["Average read", 1]
     for x in range (6):
         BLOCK_SIZE = (512*(2**(x)))
         Header.append(BLOCK_SIZE)
