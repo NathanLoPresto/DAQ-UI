@@ -38,8 +38,8 @@ pipe_addr_list    = [0x80, 0x80]
 data_set          = []
 clock_divs        = []
 clock_divider     = []
+user_scaling      = []
 
-USER_SCALING      = 1
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
 WRITE_SIZE        = (8*1024*1024)
@@ -53,6 +53,7 @@ def create_dataset():
         data_set.append([])
         clock_divs.append(10)
         clock_divider.append(0)
+        user_scaling.append(1)
 
 #Initialize the FPGA for calls to "f"
 def config():
@@ -156,6 +157,7 @@ class MainWindow(QtWidgets.QMainWindow):
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             global clock_divider
+            global user_scaling
             clock_divider[self.chan]+=1
             if (clock_divider[self.chan]==clock_divs[self.chan]):
                 clock_divider[self.chan]=0
@@ -163,7 +165,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 a=(self.x[-1]+1)
                 self.x.append(a)
                 self.y = self.y[1:]  # Remove the first
-                self.y = np.append(self.y, np.mean(d)*USER_SCALING)
+                self.y = np.append(self.y, np.mean(d)*user_scaling[self.chan])
                 self.data_line.setData(self.x, self.y)
      
 #Given a buffer and DDR address, writes to SDRAM
@@ -243,9 +245,9 @@ def change_clock():
     print("Clocking edge changed")
 
 #changes the scaling of the outputs
-def change_scaling(scaling):
-    global USER_SCALING
-    USER_SCALING=scaling
+def change_scaling(scaling, channel):
+    global user_scaling
+    user_scaling[channel] = scaling
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
