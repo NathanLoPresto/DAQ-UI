@@ -82,10 +82,8 @@ def convert_data(buf):
     d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
     if bits == 16:
         d2 = d[0::4] + (d[1::4] << 8)
-    elif bits == 18:
-        # TODO: test and verify  
+    elif bits == 18: 
         d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
-        # d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
     d_twos = twos_comp(d2, bits)
     return d_twos
 
