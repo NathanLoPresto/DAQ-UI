@@ -15,10 +15,10 @@ import os
 
 #All(except ep) inputted by the user before running the script
 ep                = namedtuple('ep', 'number addr used downsample_factor trig_addr')
-ad5453            = ep(0, 0xA0, True,  1, 0x01)
-ad7960            = ep(1, 0xA1, True,  1, 0x01)
-ads7952           = ep(2, 0xA0, True,  1, 0x01)
-ads8686           = ep(3, 0xA5, True,  1, 0x60)
+ad5453            = ep(0, 0xA0, False,  1, 0x01)
+ad7960            = ep(1, 0xA1, False,  1, 0x01)
+ads7952           = ep(2, 0xA0, False,  1, 0x01)
+ads8686           = ep(3, 5,    True,  1, 0x60)
 adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
@@ -149,9 +149,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_plot_data(self):
         if (adc_list[self.chan].used):
             #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
-            d  = 6
-            #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+            #d  = 6
+            d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             global clock_divider
             global user_scaling
