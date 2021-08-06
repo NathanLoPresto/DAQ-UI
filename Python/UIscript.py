@@ -263,6 +263,15 @@ def change_update_speed(factor, channel):
     global clock_divider
     clock_divider[channel] =0
 
+#given a factor and a channel, change the downsampling of the graphing window
+def downsample_change(factor, channel):
+    adc_list[channel].downsample_factor = factor
+
+#Given a factor, downsample all of the channels to that value
+def all_factors(factor):
+    for x in adc_list:
+        x.downsample_factor= factor
+        
 #Given a string, it iwll append it to the notes eventually dumped into the JSON file
 def add_note(note):
     notes.append(note)
