@@ -144,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if (adc_list[self.chan].used):
             #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
             d  = 6
-            #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+            #d = adc_list[self.chan].chip.read()
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             global clock_divider
@@ -271,11 +271,19 @@ def downsample_change(factor, channel):
 def all_factors(factor):
     for x in adc_list:
         x.downsample_factor= factor
-        
+
 #Given a string, it iwll append it to the notes eventually dumped into the JSON file
 def add_note(note):
     notes.append(note)
 
+#Given a vaklue, changes the channel of the ads7952
+def chan_select(display_chip, channel):
+    if hasattr(display_chip, 'channel'):
+        display_chip.chip.channel = channel
+    else:
+        print(display_chip, "has no attribute channel")
+
+    
 '''
 End of command block, main loop to start thread and set wire ins
 '''
@@ -284,11 +292,14 @@ if __name__ == "__main__":
     f=config()
 
     #All(except ep) inputted by the user before running the script
-    ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
-    ad7960            = DisplayChip(AD7961(f), 1, 0xA1, False,  1, 0x01)
+    #ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
+    ad7961            = DisplayChip(AD7961(f), 1, 0xA1, False,  1, 0x01)
     ads7952           = DisplayChip(ADS7952(f), 2, 0xA0, False,  1, 0x01)
     ads8686           = DisplayChip(ADS7952(f), 3, 5,    True,  1, 0x60)
-    adc_list          = [ad5453, ad7960, ads7952, ads8686]
+    adc_list          = [ad7961, ads7952, ads8686]
+
+    for x in adc_list:
+        x.chip.setup()
 
     create_dataset()
     GRAPHING_THREAD = threading.Thread(target=main_loop)
