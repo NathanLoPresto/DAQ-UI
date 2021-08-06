@@ -1,8 +1,8 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from collections import namedtuple
+from interfaces import AD7961, FPGA, AD5453, ADS7952
 from scipy import signal
 import pyqtgraph as pg
-from fpga import FPGA 
 import numpy as np
 import threading
 import datetime
@@ -13,13 +13,6 @@ import h5py
 import sys
 import os
 
-#All(except ep) inputted by the user before running the script
-ep                = namedtuple('ep', 'number addr used downsample_factor trig_addr')
-ad5453            = ep(0, 0xA0, False,  1, 0x01)
-ad7960            = ep(1, 0xA1, False,  1, 0x01)
-ads7952           = ep(2, 0xA0, False,  1, 0x01)
-ads8686           = ep(3, 5,    True,  1, 0x60)
-adc_list          = [ad5453, ad7960, ads7952, ads8686]
 
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
@@ -38,6 +31,7 @@ clock_divs        = []
 clock_divider     = []
 user_scaling      = []
 notes             = []
+adc_list          = []
 
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
@@ -149,9 +143,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_plot_data(self):
         if (adc_list[self.chan].used):
             #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
-            #d  = 6
-            d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
-            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+            d  = 6
+            #d = adc_return(f, adc_chan=adc_list[self.chan].addr, PLT=False)
+            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
             global clock_divider
             global user_scaling
@@ -217,6 +211,15 @@ def filemaker():
     with open (json_name, 'w') as outfile:
         json.dump(data, outfile)
 
+class DisplayChip:
+    def __init__(self, chip, number, addr, used, downsample_factor, trig_addr ):
+        self.chip = chip
+        self.number = number
+        self.addr = addr
+        self.used = used
+        self.downsample_factor = downsample_factor
+        self.trig_addr = trig_addr
+
 '''
 This block will contain the writable commands, useful to the UI
 '''
@@ -248,13 +251,11 @@ def change_scaling(scaling, channel):
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
-    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, False, adc_list[channel].downsample_factor,
-    adc_list[channel].trig_addr )
+    adc_list[channel].used = False
     
 #Given a paused ADC channel, it will resume the graphing and data retention
 def resume_ADC(channel):
-    adc_list[channel]= ep(adc_list[channel].number, adc_list[channel].addr, True, adc_list[channel].downsample_factor,
-    adc_list[channel].trig_addr )
+    adc_list[channel].used = True
 
 #Given two integer values, will chnage the update speed of the graph for a specific channel
 def change_update_speed(factor, channel):
@@ -272,6 +273,14 @@ End of command block, main loop to start thread and set wire ins
 
 if __name__ == "__main__":
     f=config()
+
+    #All(except ep) inputted by the user before running the script
+    ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
+    ad7960            = DisplayChip(AD7961(f), 1, 0xA1, False,  1, 0x01)
+    ads7952           = DisplayChip(ADS7952(f), 2, 0xA0, False,  1, 0x01)
+    ads8686           = DisplayChip(ADS7952(f), 3, 5,    True,  1, 0x60)
+    adc_list          = [ad5453, ad7960, ads7952, ads8686]
+
     create_dataset()
     GRAPHING_THREAD = threading.Thread(target=main_loop)
     GRAPHING_THREAD.start()
@@ -283,5 +292,3 @@ if __name__ == "__main__":
     factor = (int)(SAMPLE_SIZE/8)
     f.set_wire(0x04, factor)
     f.set_wire(0x02, 0x0000A000, 0x0003FF00 )
-
-    
