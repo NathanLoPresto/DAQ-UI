@@ -278,7 +278,7 @@ def add_note(note):
 
 #Given a vaklue, changes the channel of the ads7952
 def chan_select(display_chip, channel):
-    if hasattr(display_chip, 'channel'):
+    if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
     else:
         print(display_chip, "has no attribute channel")
@@ -293,9 +293,9 @@ if __name__ == "__main__":
 
     #All(except ep) inputted by the user before running the script
     #ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
-    ad7961            = DisplayChip(AD7961(f), 1, 0xA1, False,  1, 0x01)
-    ads7952           = DisplayChip(ADS7952(f), 2, 0xA0, False,  1, 0x01)
-    ads8686           = DisplayChip(ADS7952(f), 3, 5,    True,  1, 0x60)
+    ad7961            = DisplayChip(AD7961(f), 0, 0xA1, False,  1, 0x01)
+    ads7952           = DisplayChip(ADS7952(f), 1, 0xA0, False,  1, 0x01)
+    ads8686           = DisplayChip(ADS7952(f), 2, 5,    True,  1, 0x60)
     adc_list          = [ad7961, ads7952, ads8686]
 
     for x in adc_list:

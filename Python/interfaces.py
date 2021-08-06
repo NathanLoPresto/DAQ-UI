@@ -1,3 +1,4 @@
+  
 """
 Python script for configuring OpalKelly XEM7310
 and use it as an I2C controller.
@@ -6,18 +7,17 @@ Functions no longer in use include SHUF (shuffling) and multiple and/or timed re
 May 2021
 Lucas Koerner, koer2434@stthomas.edu
 """
-from utils import gen_mask, twos_comp, test_bit
 import ok
 import time
 import numpy as np
 import pandas as pd
 import os
 import sys
-
+from utils import *
 
 # Class for registers to be used within chips and the SPI core. Contains the register's hex address, default value, bit index, and bit width.
-class Register():
-    spreadsheet_path = os.path.join(os.getcwd(), 'Registers.xlsx')
+class Register:
+    spreadsheet_path = os.path.join(os.getcwd(), "Registers.xlsx")
     # The Registers spreadsheet is located in the covg_fpga folder so we need to find that folder. If it is not above the current directory, the program fails.
 
     def __init__(self, address, default, bit_width, bit_index_high, bit_index_low):
@@ -43,7 +43,7 @@ class Register():
         return reg_dict
 
 # Class for the FPGA itself. Handles FPGA configuration, setting wire values, and other FPGA specific functions.
-class FPGA():
+class FPGA:
     # TODO: change to complete bitfile when Verilog is combined
     def __init__(self, bitfile='bitfile.bit'):
 
@@ -109,6 +109,63 @@ class FPGA():
         self.xem.UpdateWireOuts()
         return self.xem.GetWireOutValue(address)
 
+    def set_bit(self, ep_bit, adc_chan=None):
+        if adc_chan is None:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+        else:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
+        self.xem.SetWireInValue(ep_bit.address, mask, mask)  # set
+        self.xem.UpdateWireIns()
+
+    def clear_bit(self, ep_bit, adc_chan=None):
+        if adc_chan is None:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+        else:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
+        self.xem.SetWireInValue(ep_bit.address, 0x0000, mask)  # clear
+        self.xem.UpdateWireIns()
+
+    def toggle_low(self, ep_bit, adc_chan=None):
+        if adc_chan is None:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+        else:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
+        self.xem.SetWireInValue(
+            ep_bit.address, 0x0000, mask)  # toggle low
+        self.xem.UpdateWireIns()
+        self.xem.SetWireInValue(ep_bit.address, mask, mask)   # back high
+        self.xem.UpdateWireIns()
+
+    def toggle_high(self, ep_bit, adc_chan=None):
+        if adc_chan is None:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+        else:
+            mask = gen_mask(
+                list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
+        self.xem.SetWireInValue(ep_bit.address, mask, mask)  # toggle high
+        self.xem.UpdateWireIns()
+        self.xem.SetWireInValue(ep_bit.address, 0x0000, mask)   # back low
+        self.xem.UpdateWireIns()
+
+    def send_trig(self, ep_bit):
+        ''' 
+            expects a single bit, not yet implement for list of bits 
+        '''
+        self.xem.ActivateTriggerIn(ep_bit.address, list(
+            range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+
+    def read_ep(self, ep_bit):
+        self.xem.UpdateWireOuts()
+        read_out = self.xem.GetWireOutValue(ep_bit.address)
+        return read_out
+
     def infile(self, infile, outfile):
         # RAM test
         fileIn = open(infile, "rb")
@@ -166,7 +223,7 @@ class FPGA():
 
 # Class for controllers on the FPGA using I2C protocol. Handles configuration, reading, writing, and reset.
 # Requires First.bit file for FPGA.
-class I2CController():
+class I2CController:
     DEFAULT_PARAMETERS = dict(
         # addresses for the OpalKelly interfaces (ins and outs)
         I2C_TRIGIN_GO=0,
@@ -179,22 +236,6 @@ class I2CController():
         PIPE_RESULTS=False,
         WIRE_RESULTS=True
     )
-
-    # Function to convert an integer into a list of integers, each one being 1 byte long, in the order they would be if the input integer were written out in binary.
-    def int_to_list(integer):
-        list_int = []
-        i = 0
-
-        while integer != 0:
-            # Take the least significant byte and store it at the front of the list, then shift the integer right 1 byte.
-            byte = integer % 2**(8)
-            list_int.append(byte)
-            integer >>= 8
-
-        # In case integer began at 0.
-        if len(list_int) == 0:
-            list_int.append(0)
-        return list_int[::-1]
 
     # Add the registers from the Excel file to the parameters
     reg_dict = Register.dict_from_excel('I2C')
@@ -400,7 +441,7 @@ class IOExpanderController(I2CController):
     # Method to write 2 bytes of data to the pins.
     # We only need to be given the { A2 A1 A0 } pin values for the device, we can add the 0100 and Write bit automatically
     def write(self, addr_pins, data, mask=0xffff):
-        dev_addr = self.parameters['ADDRESS_HEADER'] + (addr_pins*2)
+        dev_addr = self.parameters['ADDRESS_HEADER'] | (addr_pins << 1)
 
         # Compare with current data to mask unchanged values
         if mask == 0xffff:
@@ -422,7 +463,7 @@ class IOExpanderController(I2CController):
     # We only need to be given the { A2 A1 A0 } pin values for the device, we can add the 0100 and Read bit automatically
 
     def read(self, addr_pins):
-        dev_addr = self.parameters['ADDRESS_HEADER'] + (addr_pins*2) + 0b1
+        dev_addr = self.parameters['ADDRESS_HEADER'] | (addr_pins << 1) | 0b1
         return self.i2c_read_long(dev_addr, [self.parameters['SLAVE_INPUT_REG'].address], 2)
 
 # Class for the ID chip 24AA025UID extending the I2CController class. Handles reading and writing.
@@ -440,7 +481,7 @@ class IDChipController(I2CController):
     # Method to write up to 8 bytes of data to a given word address within the chip.
     # We only need to be given the { A2 A1 A0 } pin values for the device, we can add the 1010 and Write bit automatically
     def write(self, addr_pins, data, word_address=0x00):
-        dev_addr = self.parameters['ADDRESS_HEADER'] + (addr_pins << 1)
+        dev_addr = self.parameters['ADDRESS_HEADER'] | (addr_pins << 1)
         # Determine the byte length of the data
         shifted_data = data
         number_of_bytes = 0
@@ -459,13 +500,13 @@ class IDChipController(I2CController):
             dev_addr, [word_address], number_of_bytes, list_data)
 
     # Method to read data from a given word address within the chip.
-    # We only need to be given the { A2 A1 A0 } pin values for the device, we can add the 0100 and Read bit automatically.
+    # We only need to be given the { A2 A1 A0 } pin values for the device, we can add the 1010 and Read bit automatically.
     def read(self, addr_pins, word_address=0x00, words_read=1):
         # A word is a byte, 8 bits
-        dev_addr = self.parameters['ADDRESS_HEADER'] + (addr_pins << 1) + 0b1
+        dev_addr = self.parameters['ADDRESS_HEADER'] | (addr_pins << 1) | 0b1
         return self.i2c_read_long(dev_addr, [word_address], words_read)
 
-    # Method to get the manufactured 32-bit serial number for the chip.
+    # Method to get the manufactured 32-bit serial number for the chip. This is different for every chip.
     def get_serial_number(self, addr_pins):
         return self.read(addr_pins, word_address=self.parameters['SERIAL_NUMBER'].address, words_read=4)
 
@@ -693,7 +734,7 @@ class I2CDACController(I2CController):
 
 # Class for controllers on the FPGA using SPI protocol. Handles reading, writing, slave select, and configuration of the control register.
 # Requires top_level_module.bit file for FPGA.
-class SPIController():
+class SPIController:
     DEFAULT_PARAMETERS = dict(
         WB_SET_ADDRESS=0x80000000,  # These 3 are from the SPI core manual
         WB_WRITE=0x40000000,
@@ -1062,94 +1103,12 @@ class AD5453(SPIController):
         # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
         super().__init__(fpga, master_config=master_config, parameters=parameters, debug=debug)
 
-    '''
-    Serial Data Input. Data is clocked into the 16-bit input register upon the active edge of the serial
-    clock input. By default, in power-up mode data is clocked into the shift register upon the falling
-    edge of SCLK. The control bits allow the user to change the active edge to a rising edge.
-    Settings for AD5453
-    # creg_val = 0x40003010 # Char length of 16; clear both Tx_NEG, Rx_NEG; set ASS, IE. AD5453    
-    # val = 0x40001fff # AD5453 (half-scale)
-    '''
-
-    def set_bit(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)  # set
-        self.fpga.xem.UpdateWireIns()
-
-    def clear_bit(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)  # clear
-        self.fpga.xem.UpdateWireIns()
-
-    def toggle_low(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)  # toggle low
-        self.fpga.xem.UpdateWireIns()
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)   # back high
-        self.fpga.xem.UpdateWireIns()
-
-    def toggle_high(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)  # toggle high
-        self.fpga.xem.UpdateWireIns()
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)   # back low
-        self.fpga.xem.UpdateWireIns()
-
-    def send_trig(self, ep_bit_name):
-        ep_bit = self.parameters.get(ep_bit_name)
-        ''' 
-            expects a single bit, not yet implement for list of bits 
-        '''
-        self.fpga.xem.ActivateTriggerIn(ep_bit.address, list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-
-    def read_wire(self, ep_bit_name):
-        ep_bit = self.parameters.get(ep_bit_name)
-        self.fpga.xem.UpdateWireOuts()
-        a = self.fpga.xem.GetWireOutValue(ep_bit.address)
-        return a
-
-    def to_voltage(self, a):
-        masked = a & 0xfff  # 12 bit ADC
-        v = masked/(2**self.parameters('bits') - 1)*self.parameters('vref')
-        chan = (a & 0xf000) >> 12
-        return v, chan
-
-    '''
-    cmd_word = {ep_dataout[31:30], 2'b0, ep_dataout[29:0]};
-    // Wishbone Master
-    // Purpose: An example debug bus.  This bus takes commands from an incoming
-    //      34-bit command word, and issues those commands across a wishbone
-    //  bus, returning the result from the bus command.  Basic bus commands are:
-    //
-    //  2'b00   Read
-    //  2'b01   Write (lower 32-bits are the value to be written)
-    //  2'b10   Set address
-    //      Next 30 bits are the address
-    //      bit[1] is an address difference bit
-    //      bit[0] is an increment bit
-    //  2'b11   Special command
-    // SPI Master addresses 
-    Rx0 0x00 32 R Data receive register 0
-    CTRL 0x10 32 R/W Control and status register w/ offset 4
-    DIVIDER 0x14 32 R/W Clock divider register : w/ offset 5 
-    SS 0x18 32 R/W Slave select register: w/ offset 6
-    '''
+    # TODO: remove this?
+    # def to_voltage(self, a):
+    #     masked = a & 0xfff  # 12 bit ADC
+    #     v = masked/(2**self.parameters('bits') - 1)*self.parameters('vref')
+    #     chan = (a & 0xf000) >> 12
+    #     return v, chan
 
     def send_val(self, to_send):
         # now send SPI command
@@ -1159,7 +1118,7 @@ class AD5453(SPIController):
         for val in [self.parameters['WB_SET_ADDRESS'] | 0x1, value,  # Tx register, data to send
                     self.parameters['WB_SET_ADDRESS'] | 0x40 | 0x1, self.master_config | (1 << 8)]:  # Control register - GO (bit 8)
             self.fpga.set_wire(self.parameters['control'].address, val, mask=0xffffffff)
-            self.send_trig(self.parameters['valid'])
+            self.fpga.send_trig(self.parameters['valid'])
 
     # Method to write 14 bits of data with the option to clock data on the rising edge of the clock rather than the default falling edge of the clock.
     def write(self, data, clk_data_rising_edge=False):
@@ -1178,61 +1137,7 @@ class ADS7952(SPIController):
     def __init__(self, fpga, master_config=0x3010, parameters=DEFAULT_PARAMETERS, debug=False):
         # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
         super().__init__(fpga, master_config=master_config, parameters=parameters, debug=debug)
-
-    def set_bit(self, ep_bit_name, adc_chan = None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        f.xem.SetWireInValue(ep_bit.address, mask, mask) # set
-        f.xem.UpdateWireIns()
-
-    def clear_bit(self, ep_bit_name, adc_chan = None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        f.xem.SetWireInValue(ep_bit.address, 0x0000, mask) # clear
-        f.xem.UpdateWireIns()
-
-    def toggle_low(self, ep_bit_name, adc_chan = None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        f.xem.SetWireInValue(ep_bit.address, 0x0000, mask) # toggle low
-        f.xem.UpdateWireIns()
-        f.xem.SetWireInValue(ep_bit.address, mask, mask)   # back high
-        f.xem.UpdateWireIns()
-
-    def toggle_high(self, ep_bit_name, adc_chan = None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        f.xem.SetWireInValue(ep_bit.address, mask, mask) # toggle high
-        f.xem.UpdateWireIns()
-        f.xem.SetWireInValue(ep_bit.address, 0x0000, mask)   # back low
-        f.xem.UpdateWireIns()
-
-    def send_trig(self, ep_bit_name):
-        ep_bit = self.parameters.get(ep_bit_name)
-        '''
-            expects a single bit, not yet implement for list of bits
-        '''
-        f.xem.ActivateTriggerIn(ep_bit.address, list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-
-
-    def read_wire(self, ep_bit_name):
-        ep_bit = self.parameters.get(ep_bit_name)
-
-        f.xem.UpdateWireOuts()
-        a = f.xem.GetWireOutValue(ep_bit.address) 
-        return a 
+        self.channel = 0
 
     def to_voltage(self, a):
         bits = 12
@@ -1269,12 +1174,43 @@ class ADS7952(SPIController):
         pass  # TODO: write method
 
     # Method to read the desired channel
-    def read(self, channel):
+    def read_channel(self, channel):
         pass  # TODO: write method
+
+    # Method to read the channel determined by the channel attribute
+    def read(self):
+        return self.read_channel(self.channel)
+
+    # Method to set up the chip for use
+    def setup(self):
+        pass #TODO: figure out what needs to be set up, if anything
+
+
+# Class for the ADS8686 ADC chip.
+class ADS8686(SPIController):
+    DEFAULT_PARAMETERS = dict(SPIController.DEFAULT_PARAMETERS)
+    DEFAULT_PARAMETERS.update(Register.dict_from_excel('ADS8686'))
+
+    def __init__(self, fpga, master_config=0x3010, parameters=DEFAULT_PARAMETERS, debug=False):
+        # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
+        super().__init__(fpga, master_config=master_config, parameters=parameters, debug=debug)
+        self.channel = 0
+
+    # Method to read a desired channel on the chip
+    def read_channel(self, channel):
+        pass # TODO: write method
+
+    # Method to read from the current set channel on the chip
+    def read(self):
+        self.read_channel(self.channel)
+
+    # Method to set up the chip
+    def setup(self):
+        pass # TODO: write method
 
 
 # Class for the AD7961 Fast ADC. Does not use SPI or I2C.
-class AD7961():
+class AD7961:
     DEFAULT_PARAMETERS = {
         'adc_chan' : 0
     }
@@ -1283,48 +1219,6 @@ class AD7961():
     def __init__(self, fpga, parameters=DEFAULT_PARAMETERS):
         self.fpga = fpga
         self.parameters = parameters
-
-    def set_bit(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)  # set
-        self.fpga.xem.UpdateWireIns()
-
-    def clear_bit(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)  # clear
-        self.fpga.xem.UpdateWireIns()
-
-    def toggle_low(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)  # toggle low
-        self.fpga.xem.UpdateWireIns()
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)   # back high
-        self.fpga.xem.UpdateWireIns()
-
-
-    def toggle_high(self, ep_bit_name, adc_chan=None):
-        ep_bit = self.parameters.get(ep_bit_name)
-        if adc_chan is None:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
-        else:
-            mask = gen_mask(list(range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1))[adc_chan])
-        self.fpga.xem.SetWireInValue(ep_bit.address, mask, mask)  # toggle high
-        self.fpga.xem.UpdateWireIns()
-        self.fpga.xem.SetWireInValue(ep_bit.address, 0x0000, mask)   # back low
-        self.fpga.xem.UpdateWireIns()
-
 
     def get_status(self, fpga):
         ''' 
@@ -1363,13 +1257,13 @@ class AD7961():
 
     def setup(self):
         # reset PLL 
-        self.toggle_high(self.parameters.get('adc_pll_reset'))
-        self.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        self.fpga.toggle_high(self.parameters.get('adc_pll_reset'))
+        self.fpga.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
         # reset FIFO
-        self.toggle_high(self.parameters.get('adc_fifo_reset'))
+        self.fpga.toggle_high(self.parameters.get('adc_fifo_reset'))
         # enable ADC
-        self.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
-        self.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
+        self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
 
     # test composite ADC function that enables, reads, converts and plots
 
@@ -1378,15 +1272,14 @@ class AD7961():
         data = self.convert_data(s)
         return data
 
-    def adc_stream_mult(self, adc, swps=4):
-
+    def adc_stream_mult(self, swps=4):
         cnt = 0
         st = bytearray(np.asarray(np.ones(0, np.uint8)))
         self.fpga.xem.UpdateTriggerOuts()
 
         while cnt < swps:
             if (self.fpga.xem.IsTriggered(0x60, 0x01)):
-                s, e = adc.read_pipe_out()
+                s, e = self.fpga.read_pipe_out()
                 st += s
                 cnt = cnt + 1
                 print(cnt)
@@ -1405,6 +1298,24 @@ def count_bytes(num): #count number of bytes
         num >>= 8
         bytes += 1
     return bytes
+
+
+# TODO: move int_to_list() to utils.py
+# Function to convert an integer into a list of integers, each one being 1 byte long, in the order they would be if the input integer were written out in binary.
+def int_to_list(integer):
+    list_int = []
+
+    while integer != 0:
+        # Take the least significant byte and store it at the front of the list, then shift the integer right 1 byte.
+        byte = integer % 2**(8)
+        list_int.append(byte)
+        integer >>= 8
+
+    # In case integer began at 0.
+    if len(list_int) == 0:
+        list_int.append(0)
+
+    return list_int[::-1]
 
 
 if __name__ == '__main__':
