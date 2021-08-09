@@ -227,10 +227,12 @@ This block will contain the writable commands, useful to the UI
 #Writes a single flat voltage to the DDR3
 def write_flat_voltage(voltage):
     writeSDRAM(make_flat_voltage(voltage), 0x80)
-
+    add_note("Flat voltage of voltage ", voltage, " written to the DDR3")
+    
 #Writes a single period of a sin wave to the DDR3
 def write_sin_wave(voltage):
     writeSDRAM(make_sin_wave(voltage), 0x80)
+    add_note("Sin wave of voltage ", voltage, " written to the DDR3")
 
 #Used at any time to update the HDF5 file with the data collected
 def save_data():
@@ -243,34 +245,41 @@ def change_clock():
     f.xem.WriteRegister(0x80000010, 0x00003410)
     f.xem.ActivateTriggerIn(0x40, 8)
     print("Clocking edge changed")
+    add_note("SPI clockedge changed")
 
 #changes the scaling of the outputs
 def change_scaling(scaling, channel):
     global user_scaling
     user_scaling[channel] = scaling
+    add_note("Scaling of channel ", channel, "changed to ", scaling)
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
     adc_list[channel].used = False
-    
+    add_note("Channel ", channel, " stopped")
+
 #Given a paused ADC channel, it will resume the graphing and data retention
 def resume_ADC(channel):
     adc_list[channel].used = True
+    add_note("Channel ", channel, " resumed")
 
 #Given two integer values, will chnage the update speed of the graph for a specific channel
 def change_update_speed(factor, channel):
     clock_divs[channel] = factor
     global clock_divider
     clock_divider[channel] =0
+    add_note("update speed of channel ", channel, "changed to ", factor)
 
 #given a factor and a channel, change the downsampling of the graphing window
 def downsample_change(factor, channel):
     adc_list[channel].downsample_factor = factor
+    add_note("Chanel ", channel, "changed to downsample factor ", factor)
 
 #Given a factor, downsample all of the channels to that value
 def all_factors(factor):
     for x in adc_list:
         x.downsample_factor= factor
+    add_note("All factors changed to ", factor)
 
 #Given a string, it iwll append it to the notes eventually dumped into the JSON file
 def add_note(note):
@@ -280,6 +289,7 @@ def add_note(note):
 def chan_select(display_chip, channel):
     if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
+        add_note("Chip ", display_chip, "changed to channel ", channel)
     else:
         print(display_chip, "has no attribute channel")
 
