@@ -13,7 +13,7 @@ WRITE_SIZE  = (8*1024*1024)
 READ_SIZE   = (8*1024*1024)
 g_nMemSize  = (8*1024*1024)
 sample_size = (524288)
-
+MB_SIZE     = 2.09
 
 #Given the amplitude and period, returns an array to be plotted 
 def make_sin_wave(amplitude_shift, frequency_shift=16):
@@ -36,26 +36,15 @@ def writeSDRAM(g_buf):
     f.set_wire(0x03, 0x0004)
     f.set_wire(0x03, 0x0000)
     f.set_wire(0x03, 0x0002)
-    time1 = time.time()
     #for i in range ((int)(len(g_buf)/WRITE_SIZE)):
     r = f.xem.WriteToBlockPipeIn( epAddr= 0x80, blockSize= BLOCK_SIZE,
                                       data= g_buf[0:(len(g_buf))])
-    
-    time2 = time.time()
-    time3  = (time2-time1)
-    if (time3==0):
-        mbs=write_sin_wave(4)
-    else:
-        mbs = (int)(r/1024/1024/ time3)
-        if (mbs>500):
-            mbs = write_sin_wave(4)
 
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
     f.set_wire(0x03, 0x0004)
     f.set_wire(0x03, 0x0000)
     f.set_wire(0x03, 0x0001)
-    return mbs
 
 #reads to an empty array passed to the function
 def readSDRAM():
@@ -67,21 +56,10 @@ def readSDRAM():
     f.set_wire(0x03, 0x0004)
     f.set_wire(0x03, 0x0000)
     f.set_wire(0x03, 0x0001)
-    time1 = time.time()
 
     for i in range ((int)(g_nMemSize/WRITE_SIZE)):
         g = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
                                       data= pass_buf)
-    time2 = time.time()
-    time3  = (time2-time1)
-    if (time3==0):
-        mbs= readSDRAM()
-    else:
-        mbs = (int)(g/1024/1024/ time3)
-        if (mbs>500):
-            mbs = write_sin_wave(4)
-    
-    return mbs
 
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
@@ -110,15 +88,16 @@ if __name__ == "__main__":
     read_speed3   = ["Read", 3]
     average_write = ["Average write", 1]
     average_read  = ["Average read", 1]
+    a, b = make_sin_wave(3)
     for x in range (6):
         BLOCK_SIZE = (512*(2**(x)))
         Header.append(BLOCK_SIZE)
-        write_speed.append(write_sin_wave(3))
-        read_speed.append(readSDRAM())
-        write_speed2.append(write_sin_wave(3))
-        read_speed2.append(readSDRAM())
-        write_speed3.append(write_sin_wave(3))
-        read_speed3.append(readSDRAM())
+        write_speed.append((int)(MB_SIZE//((timeit.timeit('writeSDRAM(b)', globals=globals(), number =20))/20)))
+        read_speed.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
+        write_speed2.append((int)(MB_SIZE//((timeit.timeit('writeSDRAM(b)', globals=globals(), number =20))/20)))
+        read_speed2.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
+        write_speed3.append((int)(MB_SIZE//((timeit.timeit('writeSDRAM(b)', globals=globals(), number =20))/20)))
+        read_speed3.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
     for x in range (6):
         y = (int)(((int)(read_speed[x+2])+(int)(read_speed2[x+2])+(int)(read_speed3[x+2]))/3)
         average_read.append(y)
