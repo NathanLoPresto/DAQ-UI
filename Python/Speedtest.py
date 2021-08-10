@@ -1,3 +1,4 @@
+from os import write
 import matplotlib.pyplot as plot
 from fpga import FPGA
 import numpy as np
@@ -5,6 +6,7 @@ import struct
 import time
 import csv
 import ok
+import timeit
 
 BLOCK_SIZE  = (16384)
 WRITE_SIZE  = (8*1024*1024)
@@ -45,6 +47,8 @@ def writeSDRAM(g_buf):
         mbs=write_sin_wave(4)
     else:
         mbs = (int)(r/1024/1024/ time3)
+        if (mbs>500):
+            mbs = write_sin_wave(4)
 
     #below sets the HDL into read mode
     f.xem.UpdateWireOuts()
@@ -74,6 +78,8 @@ def readSDRAM():
         mbs= readSDRAM()
     else:
         mbs = (int)(g/1024/1024/ time3)
+        if (mbs>500):
+            mbs = write_sin_wave(4)
     
     return mbs
 
