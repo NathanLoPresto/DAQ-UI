@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from collections import namedtuple
-from interfaces import AD7961, FPGA, AD5453, ADS7952, ADS8686
+from interfaces import AD7961, AD5453, ADS7952, ADS8686
 from scipy import signal
+from fpga import FPGA
 import pyqtgraph as pg
 import numpy as np
 import threading
@@ -17,7 +18,7 @@ import os
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
-bitfile_used      = 'bitfile.bit'
+bitfile_used      = 'check.bit'
 
 #Pipe address list needs to be finalized and put into SDWrite
 start_time        = time.time()
@@ -227,12 +228,14 @@ This block will contain the writable commands, useful to the UI
 #Writes a single flat voltage to the DDR3
 def write_flat_voltage(voltage):
     writeSDRAM(make_flat_voltage(voltage), 0x80)
-    add_note("Flat voltage of voltage ", voltage, " written to the DDR3")
+    note = ("Flat voltage of voltage ", voltage, " written to the DDR3")
+    add_note(note)
     
 #Writes a single period of a sin wave to the DDR3
 def write_sin_wave(voltage):
     writeSDRAM(make_sin_wave(voltage), 0x80)
-    add_note("Sin wave of voltage ", voltage, " written to the DDR3")
+    note = ("Sin wave of voltage ", voltage, " written to the DDR3")
+    add_note(note)
 
 #Used at any time to update the HDF5 file with the data collected
 def save_data():
@@ -251,35 +254,41 @@ def change_clock():
 def change_scaling(scaling, channel):
     global user_scaling
     user_scaling[channel] = scaling
-    add_note("Scaling of channel ", channel, "changed to ", scaling)
+    note = ("Scaling of channel ", channel, "changed to ", scaling)
+    add_note(note)
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
     adc_list[channel].used = False
-    add_note("Channel ", channel, " stopped")
+    note = ("Channel ", channel, " stopped")
+    add_note(note)
 
 #Given a paused ADC channel, it will resume the graphing and data retention
 def resume_ADC(channel):
     adc_list[channel].used = True
-    add_note("Channel ", channel, " resumed")
+    note = ("Channel ", channel, " resumed")
+    add_note(note)
 
 #Given two integer values, will chnage the update speed of the graph for a specific channel
 def change_update_speed(factor, channel):
     clock_divs[channel] = factor
     global clock_divider
     clock_divider[channel] =0
-    add_note("update speed of channel ", channel, "changed to ", factor)
+    note = ("update speed of channel ", channel, "changed to ", factor)
+    add_note(note)
 
 #given a factor and a channel, change the downsampling of the graphing window
 def downsample_change(factor, channel):
     adc_list[channel].downsample_factor = factor
-    add_note("Chanel ", channel, "changed to downsample factor ", factor)
+    note = ("Chanel ", channel, "changed to downsample factor ", factor)
+    add_note(note)
 
 #Given a factor, downsample all of the channels to that value
 def all_factors(factor):
     for x in adc_list:
         x.downsample_factor= factor
-    add_note("All factors changed to ", factor)
+    note = ("All factors changed to ", factor)
+    add_note(note)
 
 #Given a string, it iwll append it to the notes eventually dumped into the JSON file
 def add_note(note):
@@ -289,7 +298,8 @@ def add_note(note):
 def chan_select(display_chip, channel):
     if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
-        add_note("Chip ", display_chip, "changed to channel ", channel)
+        note =("Chip ", display_chip, "changed to channel ", channel)
+        add_note(note)
     else:
         print(display_chip, "has no attribute channel")
 
@@ -305,11 +315,12 @@ if __name__ == "__main__":
     #ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
     ad7961            = DisplayChip(AD7961(f),  0, 0xA1, False,  1, 0x01)
     ads7952           = DisplayChip(ADS7952(f), 1, 0xA0, False,  1, 0x01)
-    ads8686           = DisplayChip(ADS8686(f), 2, 5,    True,   1, 0x60)
+    ads8686           = DisplayChip(ADS8686(f), 2,  5,    True,   1, 0x60)
     adc_list          = [ad7961, ads7952, ads8686]
 
     for x in adc_list:
-        x.chip.setup()
+        if(x.used):
+            x.chip.setup()
 
     create_dataset()
     GRAPHING_THREAD = threading.Thread(target=main_loop)

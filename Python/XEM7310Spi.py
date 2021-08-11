@@ -19,7 +19,7 @@ ep = namedtuple('ep', 'addr bits type') # address of the DEVICE_ID reg so we can
 one_deep_fifo = ep(0x24, [i for i in range(32)], 'wo') # should hand back the same data as the FPGA_data wire?
 
 # wire ins
-control       = ep(0x5, [i for i in range(32)], 'wi')  # note this is active low 
+#control       = ep(0x0, [i for i in range(32)], 'wi')  # note this is active low 
 convst        = ep(0x1, 3, 'wi') # the input signal used to start converting data (helps us read a voltage from the chip)
 spi_driver    = ep(0x1, 0, 'wi') # who is driving SPI commands? High for host, low for FPGA
 # ads_reset = ep(0x03, 4, 'wi') # used to reset the chip instead of pushing the button
@@ -30,7 +30,7 @@ valid      = ep(0x40, 11, 'ti') # tells the FPGA to read good data (same as host
 fpga_reset = ep(0x40, 1, 'ti') # this resets the entire system
 fifo_reset = ep(0x40, 2, 'ti') # empties the fifo
 clk_reset  = ep(0x40, 10, 'ti') # resets the clk divider of the SPI controller
-host_wb    = ep(0x40, 11, 'ti') # initates host wishbone transactions
+# host_wb    = ep(0x40, 11, 'ti') # initates host wishbone transactions (same as valid, remove?)
 
 # triggers out
 half_full = ep(0x60, 0, 'to') # tells the FPGA that the fifo is half full
@@ -54,11 +54,8 @@ def read_wire(ep_bit): # reads the wire and returns the value back
 
 ################## Actual executing code ##################
 # sets up the fpga by grabbing an instance of the class (as f) and initializing the device
-f = FPGA(bitfile = '1213pm.bit')
+f = FPGA(bitfile = 'fill_last_read.bit')
 f.init_device() # programs the FPGA (loads bit file)
-
-# set the SPI output mux to select a device other than the ADS7952 to avoid contention on SDO
-# f.set_wire(mux_control.addr, 1, mask = mux_control.bits)
 
 # setup the control wire so we can drive signals coming from host to FPGA and vice versa
 f.set_wire(0x0, 0xFFFF, mask = 0xFFFF_FFFF)

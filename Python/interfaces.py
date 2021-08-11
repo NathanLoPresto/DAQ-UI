@@ -1257,14 +1257,14 @@ class AD7961:
 
     def setup(self):
         # reset PLL 
-        self.fpga.toggle_high(self.parameters.get('adc_pll_reset'))
-        self.fpga.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        #self.fpga.toggle_high(self.parameters.get('adc_pll_reset'))
+        #self.fpga.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
         # reset FIFO
-        self.fpga.toggle_high(self.parameters.get('adc_fifo_reset'))
+        #self.fpga.toggle_high(self.parameters.get('adc_fifo_reset'))
         # enable ADC
-        self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
-        self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
-
+        #self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        #self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
+        print ("setup")
     # test composite ADC function that enables, reads, converts and plots
 
     def read(self):
