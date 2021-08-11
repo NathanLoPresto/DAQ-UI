@@ -61,6 +61,57 @@ def readSDRAM():
         g = f.xem.ReadFromBlockPipeOut( epAddr= 0xA0, blockSize= BLOCK_SIZE,
                                       data= pass_buf)
 
+def infile_func(self, infile, outfile):
+    # RAM test
+    fileIn = open(infile, "rb")
+    fileOut = open(outfile, "wb")
+
+    # Reset the RAM address pointer.
+    self.xem.ActivateTriggerIn(0x41, 0)
+
+    while fileIn:
+        buf = bytearray(fileIn.read(2048))
+
+        got = len(buf)
+        if (got == 0):
+            break
+
+        if (got < 2048):
+            buf += b"\x00"*(2048-got)
+
+        # Write a block of data.
+        f.xem.ActivateTriggerIn(0x41, 0)
+        f.xem.WriteToPipeIn(0x80, buf)
+
+        # Perform DES on the block.
+        f.xem.ActivateTriggerIn(0x40, 0)
+
+        # Wait for the TriggerOut indicating DONE.
+        for i in range(100):
+            f.xem.UpdateTriggerOuts()
+            if (f.xem.IsTriggered(0x60, 1)):
+                break
+
+        f.xem.ReadFromPipeOut(0xa0, buf[0:1])
+        fileOut.write(buf[0:1])
+
+    fileIn.close()
+    fileOut.close()
+
+def test_infile(configured_fpga, text):
+    with open('infile.txt', 'w') as infile:
+        infile.write(text)
+
+    infile_func(f, 'infile.txt', 'outfile.txt')
+
+    with open('outfile.txt', 'r') as outfile:
+        output = outfile.read()
+
+    if text == output.split('\x00')[0]:
+        print("The write/read test was a success")
+    else:
+        print("The write/read test didnt work")
+
 #given an amplitude and a period, it will write a waveform to the DDR3
 def write_sin_wave (a):
     time_axis, g_buf_init = make_sin_wave(a)
@@ -88,6 +139,7 @@ if __name__ == "__main__":
     read_speed3   = ["Read", 3]
     average_write = ["Average write", 1]
     average_read  = ["Average read", 1]
+    test_infile(f, 'a')
     a, b = make_sin_wave(3)
     for x in range (6):
         BLOCK_SIZE = (512*(2**(x)))
