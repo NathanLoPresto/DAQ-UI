@@ -141,6 +141,7 @@ if __name__ == "__main__":
     average_read  = ["Average read", 1]
     test_infile(f, 'a')
     a, b = make_sin_wave(3)
+    before = time.time()
     for x in range (6):
         BLOCK_SIZE = (512*(2**(x)))
         Header.append(BLOCK_SIZE)
@@ -150,6 +151,8 @@ if __name__ == "__main__":
         read_speed2.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
         write_speed3.append((int)(MB_SIZE//((timeit.timeit('writeSDRAM(b)', globals=globals(), number =20))/20)))
         read_speed3.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
+    after = time.time()
+    print(after-before)
     for x in range (6):
         y = (int)(((int)(read_speed[x+2])+(int)(read_speed2[x+2])+(int)(read_speed3[x+2]))/3)
         average_read.append(y)
