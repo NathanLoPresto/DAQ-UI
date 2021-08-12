@@ -1,9 +1,9 @@
+from interfaces import AD7961, AD5453, ADS7952, ADS8686
 from PyQt5 import QtWidgets, QtCore, QtGui
 from collections import namedtuple
-from interfaces import AD7961, AD5453, ADS7952, ADS8686
 from scipy import signal
-from fpga import FPGA
 import pyqtgraph as pg
+from fpga import FPGA
 import numpy as np
 import threading
 import datetime
@@ -18,7 +18,7 @@ import os
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
-bitfile_used      = 'check.bit'
+bitfile_used      = 'bitfile.bit'
 
 #Pipe address list needs to be finalized and put into SDWrite
 start_time        = time.time()
@@ -312,11 +312,11 @@ if __name__ == "__main__":
     f=config()
 
     #All(except ep) inputted by the user before running the script
-    #ad5453            = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
+    #ad5453           = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
     ad7961            = DisplayChip(AD7961(f),  0, 0xA1, False,  1, 0x01)
-    ads7952           = DisplayChip(ADS7952(f), 1, 0xA0, False,  1, 0x01)
-    ads8686           = DisplayChip(ADS8686(f), 2,  5,    True,   1, 0x60)
-    adc_list          = [ad7961, ads7952, ads8686]
+    #ads7952          = DisplayChip(ADS7952(f), 1, 0xA0, False,  1, 0x01)
+    ads8686           = DisplayChip(ADS8686(f), 1,  5,    True,   1, 0x60)
+    adc_list          = [ad7961, ads8686]
 
     for x in adc_list:
         if(x.used):
