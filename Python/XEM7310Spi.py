@@ -36,7 +36,7 @@ clk_reset  = ep(0x40, 10, 'ti') # resets the clk divider of the SPI controller
 half_full = ep(0x60, 0, 'to') # tells the FPGA that the fifo is half full
 
 # pipeout (bits are meaningless)
-adc_pipe = ep(0xA5, [i for i in range(32)], 'po') # reads the fifo in bytes (used in graphing)
+adc_pipe = ep(0xA0, [i for i in range(32)], 'po') # reads the fifo in bytes (used in graphing)
 
 ################## Define functions for fpga reading/sending data  ##################
 def send_trig(ep_bit):
@@ -54,20 +54,20 @@ def read_wire(ep_bit): # reads the wire and returns the value back
 
 ################## Actual executing code ##################
 # sets up the fpga by grabbing an instance of the class (as f) and initializing the device
-f = FPGA(bitfile = 'fixed_endpoints.bit')
+f = FPGA(bitfile = 'datalinefixed.bit')
 f.init_device() # programs the FPGA (loads bit file)
 
 # setup the control wire so we can drive signals coming from host to FPGA and vice versa
-f.set_wire(0x0, 0xFFFF, mask = 0xFFFF_FFFF)
+f.set_wire(0x0, 0x0, mask = 0xFFFF)
 
 # setup the CONVST signal so we can drive the wire high or low (use hex address 0x01, NOT 0x03)
 f.set_wire(0x01, 0x3, mask = 0x3)
 
 # setup the data wire to the FPGA so it can get data from the FPGA
-f.set_wire(0x05, 0xFFFF, mask = 0xFFFF_FFFF)
+f.set_wire(0x05, 0xFFFF, mask = 0xFFFF)
 
 # setup the fifo wire so we can read data back from the FPGA
-f.set_wire(0x24, 0xFFFF, mask = 0xFFFF_FFFF)
+#f.set_wire(0x24, 0xFFFF, mask = 0xFFFF_FFFF)
 
 '''
 Wishbone information 

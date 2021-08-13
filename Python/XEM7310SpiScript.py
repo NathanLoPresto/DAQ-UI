@@ -117,9 +117,9 @@ def sendSPI(message): # what needs to be sent to the ADS?
     for i in range(2):
         for val in [wb_r | Txreg_addr, message, # go to the Tx register, store data to send (from cmd)
                     wb_r | creg_addr,  wb_w | (creg_set | (1 << 8))]: # Tells the Control register - GO (bit 8)
-            print('Sending command 0x{:X}'.format(val))
-            print(valid.addr, valid.bits)
-            print('Control address is 0x{:X}'.format(control.addr))
+            #print('Sending command 0x{:X}'.format(val))
+            #print(valid.addr, valid.bits)
+            #print('Control address is 0x{:X}'.format(control.addr))
             f.set_wire(control.addr, val, mask = 0xffffffff) # sets the wire to the ADS8686 and adds mask to get correct data back
             send_trig(valid)
     
@@ -143,7 +143,7 @@ def writeRegBridge():
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
-    res = f.xem.WriteRegister(0x2, 0x4000_0000) # opal kelly function that writes to a register
+    res = f.xem.WriteRegister(0x2, 0x4000_88AA) # opal kelly function that writes to a register
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
@@ -151,7 +151,7 @@ def writeRegBridge():
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
-    res = f.xem.WriteRegister(0x4, 0x4000_3610) # opal kelly function that writes to a register
+    res = f.xem.WriteRegister(0x4, 0x4000_3710) # opal kelly function that writes to a register
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 

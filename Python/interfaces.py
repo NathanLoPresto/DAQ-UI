@@ -1281,7 +1281,7 @@ class AD7961:
     # test composite ADC function that enables, reads, converts and plots
 
     def read(self):
-        s, e = self.fpga.read_pipe_out(addr_offset=1)
+        s, e = self.fpga.read_pipe_out(addr_offset=0)
         data = self.convert_data(s)
         return data
 
