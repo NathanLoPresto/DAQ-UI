@@ -103,7 +103,7 @@ def SPI_config():
         # print('Sending command 0x{:X}'.format(val))
         # print('Control address is 0x{:X}'.format(control.addr))
         # sets a wire to the FPGA to send each command and then triggers the Opal Kelly
-        f.set_wire(FPGA_data.addr, val, mask = 0xffffffff)
+        f.set_wire(control.addr, val, mask = 0xffffffff)
         send_trig(valid) 
 
 # Expects a 8-digit hex command!!
@@ -119,8 +119,8 @@ def sendSPI(message): # what needs to be sent to the ADS?
                     wb_r | creg_addr,  wb_w | (creg_set | (1 << 8))]: # Tells the Control register - GO (bit 8)
             print('Sending command 0x{:X}'.format(val))
             print(valid.addr, valid.bits)
-            print('Control address is 0x{:X}'.format(FPGA_data.addr))
-            f.set_wire(FPGA_data.addr, val, mask = 0xffffffff) # sets the wire to the ADS8686 and adds mask to get correct data back
+            print('Control address is 0x{:X}'.format(control.addr))
+            f.set_wire(control.addr, val, mask = 0xffffffff) # sets the wire to the ADS8686 and adds mask to get correct data back
             send_trig(valid)
     
     # Now read the result back and store it print to the console and return

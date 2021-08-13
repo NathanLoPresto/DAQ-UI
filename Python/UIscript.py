@@ -74,7 +74,7 @@ def twos_comp(val, bits):
 def convert_data(buf):
     bits = 16 # for AD7961 
     # bits=18 for AD7960
-    d = np.frombuffer(buf, dtype=np.uint8).astype(np.uint32)
+    d = np.frombuffer(buf, dtype=np.uint16).astype(np.uint32)
     if bits == 16:
         d2 = d[0::4] + (d[1::4] << 8)
     elif bits == 18: 
@@ -143,8 +143,9 @@ class MainWindow(QtWidgets.QMainWindow):
     #Eventual call to IsTriggered()
     def update_plot_data(self):
         if (adc_list[self.chan].used):
-            #if (f.xem.IsTriggered(adc_list[self.chan].trig_addr)):
-            d  = 6
+            #f.xem.UpdateTriggerOuts()
+            #if (f.xem.IsTriggered(0x60, (2**14))):
+            d = adc_list[self.chan].chip.read(f)
             #d = adc_list[self.chan].chip.read()
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
@@ -309,7 +310,7 @@ End of command block, main loop to start thread and set wire ins
 '''
 
 if __name__ == "__main__":
-    f=config()
+    #f=config()
 
     #All(except ep) inputted by the user before running the script
     #ad5453           = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)

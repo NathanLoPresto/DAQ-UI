@@ -1200,9 +1200,22 @@ class ADS8686(SPIController):
     def read_channel(self, channel):
         pass # TODO: write method
 
+    def convert_data(self, buf):
+        bits = 16 # for AD7961 
+        # bits=18 for AD7960
+        d = np.frombuffer(buf, dtype=np.uint16).astype(np.uint32)
+        if bits == 16:
+            d2 = d[0::4] + (d[1::4] << 8)
+        elif bits == 18: 
+            d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
+        d_twos = twos_comp(d2, bits)
+        return d_twos
+
     # Method to read from the current set channel on the chip
-    def read(self):
-        self.read_channel(self.channel)
+    def read(self, f):
+        d, g  = f.read_pipe_out(data_len = 16)
+        d = self.convert_data(d)
+        return d
 
     # Method to set up the chip
     def setup(self):
