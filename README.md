@@ -21,7 +21,7 @@ The applications of this project extend deep into the electrophysiology communit
 **Methodology/Results(Speed Testing)**
 ***
 
-When conducting speed tests (below), the best way to automate the process was with a Python script cycling though transfer sizes and returning transfer time elapsed. This value could divide the returned transfer size and write a speed in MB/s to a CSV file. With multiple tests and a relatively seamless process, results were conclusive and clear that FIFO transfer sizes closest to 16kB yielded that fastest transfer speed.
+Both data coming into the host computer from the ADCs and waveforms written to the DDR3 SDRAM rely on the FrontPanel API's read/write functions. These functions bridge the gap between the Python script and the HDL, and provide fast and reliable transfers between the FPGA and the host computer. By testing the speed of read/write with different transfer lengths, conclusively, the best transfer lengths for the script could be chosen. With multiple tests and a relatively seamless process, results were conclusive and clear that FIFO transfer sizes closest to 16kB yielded that fastest transfer speed.
 
 <img src="https://user-images.githubusercontent.com/78660740/127703939-505e441f-8625-467c-a1ab-aa91157dd2dc.png" width = "400" height = "250">
 
