@@ -203,6 +203,7 @@ def save_data():
     print("Saving data...")
     filemaker()
     print ("Data saved to: ", save_hdf5)
+    note = ("Data saved at time: ", (str)(current_time) )
 
 #Used to change the SPI clockedge 
 def change_clock():
@@ -215,7 +216,7 @@ def change_clock():
 def change_scaling(scaling, channel):
     global user_scaling
     user_scaling[channel] = scaling
-    note = ("Scaling of channel ", channel, "changed to ", scaling)
+    note = ("Scaling of channel ", channel, " changed to ", scaling)
     add_note(note)
 
 #Given, the graphing channel, pick which channel to stop pulling data and graphing from 
@@ -235,13 +236,13 @@ def change_update_speed(factor, channel):
     clock_divs[channel] = factor
     global clock_divider
     clock_divider[channel] =0
-    note = ("update speed of channel ", channel, "changed to ", factor)
+    note = ("Update speed of channel ", channel, " changed to ", factor)
     add_note(note)
 
 #given a factor and a channel, change the downsampling of the graphing window
 def downsample_change(factor, channel):
     adc_list[channel].downsample_factor = factor
-    note = ("Chanel ", channel, "changed to downsample factor ", factor)
+    note = ("Chanel ", channel, " changed to downsample factor ", factor)
     add_note(note)
 
 #Given a factor, downsample all of the channels to that value
@@ -259,7 +260,7 @@ def add_note(note):
 def chan_select(display_chip, channel):
     if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
-        note =("Chip ", display_chip, "changed to channel ", channel)
+        note =("Chip ", display_chip, " changed to channel ", channel)
         add_note(note)
     else:
         print(display_chip, "has no attribute channel")
