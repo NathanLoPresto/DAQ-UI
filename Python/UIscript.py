@@ -260,7 +260,7 @@ def add_note(note):
 def chan_select(display_chip, channel):
     if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
-        note =("Chip ", display_chip, " changed to channel ", channel)
+        note =("Chip ", (str)(display_chip), " changed to channel ", channel)
         add_note(note)
     else:
         print(display_chip, "has no attribute channel")
