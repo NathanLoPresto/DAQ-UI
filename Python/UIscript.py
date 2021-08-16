@@ -1,6 +1,5 @@
-from interfaces import AD7961, AD5453, ADS7952, ADS8686
-from PyQt5 import QtWidgets, QtCore, QtGui
-from collections import namedtuple
+from interfaces import AD7961, ADS8686
+from PyQt5 import QtWidgets, QtCore
 from scipy import signal
 import pyqtgraph as pg
 from fpga import FPGA
@@ -14,7 +13,6 @@ import h5py
 import sys
 import os
 
-
 #These will eventually be taken from top-down file
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
@@ -23,8 +21,6 @@ bitfile_used      = 'bitfile.bit'
 #Pipe address list needs to be finalized and put into SDWrite
 start_time        = time.time()
 now               = datetime.datetime.now()
-save_flag         = threading.Event()
-run_flag          = threading.Event()
 current_time      = now.strftime("%H_%M_%S")
 pipe_addr_list    = [0x80, 0x80]
 data_set          = []
@@ -55,39 +51,6 @@ def config():
     if (False == f.init_device()):
         print("Configuration failed")
     return f
-
-#Used as a twos_comp converter for the convert_data function
-def twos_comp(val, bits):
-    def twos_comp_scalar(val, bits):
-        if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
-            val = val - (1 << bits)        # compute negative value
-        return val                         # return positive value as is
-    if hasattr(val, "__len__"):
-        tmp_arr = np.array([])
-        for v in val:
-            tmp_arr = np.append(tmp_arr, twos_comp_scalar(v,bits))
-        return tmp_arr
-    else:
-        return twos_comp_scalar(val, bits)
-
-#Given a buffer from the read_pipe, converts into float-type for graphing
-def convert_data(buf):
-    bits = 16 # for AD7961 
-    # bits=18 for AD7960
-    d = np.frombuffer(buf, dtype=np.uint16).astype(np.uint32)
-    if bits == 16:
-        d2 = d[0::4] + (d[1::4] << 8)
-    elif bits == 18: 
-        d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
-    d_twos = twos_comp(d2, bits)
-    return d_twos
-
-#Read from pipe-out, returns a float-array for graphing
-def adc_return(fpga, adc_chan = 0, filename = None, PLT = False):
-    RAW_DATA,unused        = fpga.read_pipe_out(addr_offset = adc_chan, data_len=TRANSFER_LENGTH)
-    CONVERTED_DATA         = convert_data(RAW_DATA)
-    SCALED_DATA            = (CONVERTED_DATA*V_SCALING)
-    return SCALED_DATA
 
 #returns a dictionary of metadata for JSON file creation
 def get_meta_data():
@@ -143,12 +106,9 @@ class MainWindow(QtWidgets.QMainWindow):
     #Eventual call to IsTriggered()
     def update_plot_data(self):
         if (adc_list[self.chan].used):
-            #f.xem.UpdateTriggerOuts()
-            #if (f.xem.IsTriggered(0x60, (2**14))):
             d = adc_list[self.chan].chip.read(f)
-            #d = adc_list[self.chan].chip.read()
-            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             data_set[self.chan].append(d)
+            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             global clock_divider
             global user_scaling
             clock_divider[self.chan]+=1
@@ -310,12 +270,9 @@ End of command block, main loop to start thread and set wire ins
 '''
 
 if __name__ == "__main__":
-    #f=config()
+    f=config()
 
-    #All(except ep) inputted by the user before running the script
-    #ad5453           = DisplayChip(AD5453(f), 0, 0xA0, False,  1, 0x01)
     ad7961            = DisplayChip(AD7961(f),  0, 0xA1, False,  1, 0x01)
-    #ads7952          = DisplayChip(ADS7952(f), 1, 0xA0, False,  1, 0x01)
     ads8686           = DisplayChip(ADS8686(f), 1,  5,    True,   1, 0x60)
     adc_list          = [ad7961, ads8686]
 

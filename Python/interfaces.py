@@ -1219,7 +1219,7 @@ class ADS8686(SPIController):
 
     # Method to set up the chip
     def setup(self):
-        pass # TODO: write method
+        print("The ADS8686 is being setup")
 
 
 # Class for the AD7961 Fast ADC. Does not use SPI or I2C.
