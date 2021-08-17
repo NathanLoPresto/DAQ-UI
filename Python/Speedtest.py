@@ -152,12 +152,23 @@ if __name__ == "__main__":
         write_speed3.append((int)(MB_SIZE//((timeit.timeit('writeSDRAM(b)', globals=globals(), number =20))/20)))
         read_speed3.append((int)(MB_SIZE//((timeit.timeit('readSDRAM()', globals=globals(), number =20))/20)))
     after = time.time()
-    print(after-before)
     for x in range (6):
         y = (int)(((int)(read_speed[x+2])+(int)(read_speed2[x+2])+(int)(read_speed3[x+2]))/3)
         average_read.append(y)
         b = (int)(((int)(write_speed[x+2])+(int)(write_speed2[x+2])+(int)(write_speed3[x+2]))/3)
         average_write.append(b)
+    elapsed = (after-before)
+    Average_speed = 0
+    for x in range(6):
+        Average_speed = (Average_speed + (int)(average_read[x+1]))
+    for x in range (6):
+        Average_speed = (Average_speed + (int)(average_write[x+1]))
+    Average_speed/=12
+    Transfer_time = (1504/Average_speed)
+    divisor = (Transfer_time-elapsed)
+    end_percentage = (divisor/(elapsed))
+    print("Percentage of transfer spent in downtime: ", (int)(end_percentage*100), "%")
+
     with open('Speedtest.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
