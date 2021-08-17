@@ -69,7 +69,7 @@ Txreg_addr = 0x01 # Tx/Rx register (at the same address! But has dual functional
 
 # Configuring the SPI controller
 creg_set = 0x3710 # Char length of 16. Samples Tx/Rx on NEG edge; sets ASS, IE
-clk_div = 0x6 # Takes the given clk at 25MHz and divides it so you get a 2MHz clk instead
+clk_div = 0x6 # Takes the given clk at 25MHz and divides it to get a clk around 170,000 Hz
 ss = 0x1 # sets the active ss line by setting the LSB of a SPI command to 1 during configuration
 
 # SPI write and read commands
@@ -95,7 +95,7 @@ def SPI_config():
     # f.xem.ActivateTriggerIn(0x40, 10)   # resets the spi controller clock divider
     # f.xem.ActivateTriggerIn(0x40, 2)    # empties the fifo for the ads8686
     # f.xem.ActivateTriggerIn(0x40, 11)   # initiates host wishbone and SPI transactions
-    f.set_wire(0x1, 1, 0xFFFF)             # sets the wire for spi_driver so the host is driving commands
+    f.set_wire(1, 1, 0xFFFF)              # sets the wire for spi_driver so the host is driving commands
 
     for val in [wb_r | divreg_addr, wb_w | clk_div, # divider (need to look into settings of 1 and 2 didn't show 16 clock cycles) 
                 wb_r | creg_addr,   wb_w | creg_set,  # control register (CHAR_LEN = 16, bits 10,9, 13 and 12)
@@ -117,9 +117,8 @@ def sendSPI(message): # what needs to be sent to the ADS?
     for i in range(2):
         for val in [wb_r | Txreg_addr, message, # go to the Tx register, store data to send (from cmd)
                     wb_r | creg_addr,  wb_w | (creg_set | (1 << 8))]: # Tells the Control register - GO (bit 8)
-            #print('Sending command 0x{:X}'.format(val))
-            #print(valid.addr, valid.bits)
-            #print('Control address is 0x{:X}'.format(control.addr))
+            # print('Sending command 0x{:X}'.format(val))
+            # print('Control address is 0x{:X}'.format(control.addr))
             f.set_wire(control.addr, val, mask = 0xffffffff) # sets the wire to the ADS8686 and adds mask to get correct data back
             send_trig(valid)
     
@@ -138,12 +137,11 @@ def writeRegBridge():
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
-    # write commands using 1111, 2222, 3333, 4444 to see what array of data_out is used
     res = f.xem.WriteRegister(0x1, 0x8000_0001) # opal kelly function that writes to a register
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
-    res = f.xem.WriteRegister(0x2, 0x4000_88AA) # opal kelly function that writes to a register
+    res = f.xem.WriteRegister(0x2, 0x4000_0000) # opal kelly function that writes to a register
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
@@ -155,14 +153,17 @@ def writeRegBridge():
     f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
     print('Read 0x{:X}'.format(res))
 
-    f.set_wire(0x1, 0, 1) # lower the wire so the FPGA can take control of sending SPI commands, won't listen to python anymore
+    # f.set_wire(0x1, 0, 1) # lower the wire so the FPGA can take control of sending SPI commands, won't listen to python anymore
 
-def readRegBridge(reg):
-    ''' Checks the status of a register bridge register and hands back the value '''
-    res = f.xem.ReadRegister(reg) # opal kelly function to write to a register
-    f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
-
-    return res
+def cont_data():
+    ''' Continuously reads the pipeout to see if data is updating correctly before FPGA driven SPI begins '''
+    for i in range(100):
+        print(f.read_pipe_out(addr_offset = 5, data_len = 16))
+        wire = read_wire(one_deep_fifo)
+        print('0x{:X}'.format(wire))
+        if(i > 4): # once we have read a few times with host mode enabled
+            f.set_wire(1, 0, 0xFFFF) # set the wire to FPGA to activate the reg bridge
+    f.set_wire(1, 1, 0xFFFF) # set the wire back for host mode
     
 def writeReg(msg, reg_name):
     ''' Writes to a specific register on the ads8686 by using wishbone commands and stored Hex
@@ -195,21 +196,6 @@ def writeReg(msg, reg_name):
 
     return check
 
-def continuous_data():
-    ''' Should allow us to send SPI commands between host -- > FPGA and then let the FPGA take over
-    the sending and recieving of SPI commands '''
-    # Setup the fpga by configuring the SPI controller and updating the triggers/wires in
-    SPI_config()
- 
-    f.xem.ActivateTriggerIn(0x40, 11) # instantiates the signal thattells the wishbone master when we want to send a SPI command
-    f.set_wire(0x01, 1, 1) # sets up host driven SPI commands (wire 1, bit 0, mask = 1)
-
-    # Set up the register bridge with clk divider, ctrl reg settings, etc for when the FPGA takes over
-    NOP = 0x4000_0000 # don't need to use the for val loop above, sendSPI handles the SPI registers for us
-    sendSPI(NOP)
- 
-    f.set_wire(0x01, 0, 1) # lower the wire so the FPGA takes over SPI commands
-
 def readAll(): # reads all 43 reg's and prints their values
     logging.info('------------------------------------------------------------------------------------------')
     for register in dictofRegs: # lists are indexed starting at 0, so i should too
@@ -231,29 +217,28 @@ def seqControl():
     seqRegs.append('chan_sel') # add reg name to list of seq regs
 
     # step 2: configure the rangeA1, rangeA2, rangeB1, and rangeB2 regs
-    seqA1 = 0xAA # set range to 5V
+    seqA1 = 0xAA # set range to 2.5V
     seqCmds.append(seqA1)
     seqRegs.append('rangeA1')
 
-    seqA2 = 0xAA # set range to 5V
+    seqA2 = 0xAA # set range to 2.5V
     seqCmds.append(seqA2)
     seqRegs.append('rangeA2')
 
-    seqB1 = 0xAA # set range to 5V
+    seqB1 = 0xAA # set range to 2.5V
     seqCmds.append(seqB1)
     seqRegs.append('rangeB1')
 
-    # seqB2 = 0xFF # set range to 10V
-    seqB2 = 0xAA # set range to 5V
+    seqB2 = 0xAA # set range to 2.5V
     seqCmds.append(seqB2)
     seqRegs.append('rangeB2')
 
     # step 3: setup the sequencer stack regs for each channel we want to read (up to 32 reads)
-    s0 = 0x00 # reads channel 0A/0B, go next, cmd 0xC000
+    s0 = 0x0 # reads channel 0A/0B, STOP, cmd 0xC100
     seqCmds.append(s0)
     seqRegs.append('seq0')
-
-    s1 = 0x111 # reads channel 1A/1B, STOP, cmd 0xC211
+    
+    s1 = 0x311 # reads channel 1A/1B, STOP, cmd 0xC211
     seqCmds.append(s1)
     seqRegs.append('seq1')
     '''
@@ -327,43 +312,47 @@ def readSequence(seqCmds, seqRegs, reads):
     conversion results for (off the ADC) readCode to take the readings and convert them into a v  '''
     voltVals = np.array([], dtype = np.single) # stores each V that was read (after converting from 2's comp to float)
     
-    # step 6: now provide a dummy CONVST pulse
+    # step 6: now provide a dummy CONVST pulse (don't need anyore, verilog can help with this)
+    '''
     f.set_wire(0x01, 0x8, mask = 0xFFFF) # wire high
     f.set_wire(0x01, 0x0, mask = 0xFFFF) # wire low
+    '''
 
     # step 7: provide a CONVST pulse for each seq_stack reg we want to read a v from and decipher the code!
     for i in range(reads): # if we want to read the sequencer multiple times, repeat the process x number of times
-        ''' Find a better way to iterate through the list '''
         stop = (len(seqCmds) - 1) # when do we want to stop iterating through the list of registers?
         for x in range(5, stop, 1): # if we haven't read all the regs (but stop before the config reg!!)
             # remember, starts at seq0 (index 5), stops at total length - 1, step size 1 (might change later)
-            f.set_wire(0x01, 0x8, mask = 0xFFFF) # wire high
-            f.set_wire(0x01, 0x0, mask = 0xFFFF) # wire low
 
             print('\nReading {}'.format(seqRegs[x]))
 
+            # send a NOP code so we can see the ADC readings
             code = sendSPI(0x4000_0000) # NOP code to "listen"
-            # print('code is: {}'.format(int(code))) # int code
+            # let the register bridge take over so it will send a NOP code with a CONVST pulse
+            f.set_wire(1, 0, 0xFFFF)
+            f.set_wire(1, 1, 0xFFFF)
 
             global LSB
             # find the setting of the voltage by reading the correct range register
             rng = writeReg(0x0, 'rangeA1') # range is set in register rangeA1
 
-            if(rng == 0x55 or rng == 0x7F or rng == 0x2A): # if the analog range is set to 2.5V 
-                LSB = 0.000076 # in V! Tells how accurate (large/small) step size is
-            elif(rng == 0xAA): # if the analog range is set to 5V
-                LSB = 0.000152
-            elif(rng == 0xFF): # if the analog range is set to 10V
-                LSB = 0.000305
-            else: # for a value that isn't on the datasheet, calculate the LSB value
-                LSB = ((2*rng)/65536) # or (2*rng)/2^16
+            # if(rng == 0x55 or rng == 0x7F or rng == 0x2A): # if the analog range is set to 2.5V 
+            LSB = 0.000076 # in V! Tells how accurate (large/small) step size is
+            # elif(rng == 0xAA): # if the analog range is set to 5V
+            #     LSB = 0.000152
+            # elif(rng == 0xFF): # if the analog range is set to 10V
+            #     LSB = 0.000305
+            # else: # for a value that isn't on the datasheet, calculate the LSB value
+            #     LSB = ((2*rng)/65536) # or (2*rng)/2^16
 
-            # print('{} LSB'.format(LSB))
+            print('{} LSB'.format(LSB))
             voltVals = readCode(code, voltVals) # convert code into a v
 
-    # done reading, reset the sequencer to stack 0
-    f.set_wire(0x01, 0x8, mask = 0xFFFF) # wire high
-    f.set_wire(0x01, 0x0, mask = 0xFFFF) # wire low
+    # done reading, reset the sequencer to stack 0 with CONVST pulse (let register bridge do this)
+    '''
+    f.set_wire(1, 0, 0xFFFF) # CONVST high
+    f.set_wire(1, 1, 0xFFFF) # CONVST low
+    '''
 
     return voltVals
 
@@ -374,10 +363,14 @@ def readCode(v, voltVals):
     exp = (float(v)*LSB)
     voltVals = np.append(voltVals, exp) # append the now converted float into the list of read values
     print('V is: {}'.format(exp))
-    exp = (exp/LSB) # undo the calculation so we can find the expected code
+ 
+    if (exp != 0): # if we got a code back that wasn't 0
+        exp = (exp/LSB) # undo the calculation so we can find the expected code
+    else:
+        exp = 0 # set the exp to 0 so we don't get a ZeroDivisionError
 
     # now calculate the code in two's complement
-    exp = twos_comp(exp, 16) # code always has 16 bits, so hard code
+    exp = twos_comp(int(exp), 16) # code always has 16 bits, so hard code
 
     return voltVals # so the user can see/modify the data
 

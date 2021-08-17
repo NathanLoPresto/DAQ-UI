@@ -108,7 +108,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if (adc_list[self.chan].used):
             d = adc_list[self.chan].chip.read(f)
             data_set[self.chan].append(d)
-            d = signal.decimate(d, adc_list[self.chan].downsample_factor)
+            #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             global clock_divider
             global user_scaling
             clock_divider[self.chan]+=1
@@ -271,7 +271,7 @@ End of command block, main loop to start thread and set wire ins
 '''
 
 if __name__ == "__main__":
-    f=config()
+    #f=config()
 
     ad7961            = DisplayChip(AD7961(f),  0, 0xA1, False,  1, 0x01)
     ads8686           = DisplayChip(ADS8686(f), 1,  5,    True,   1, 0x60)

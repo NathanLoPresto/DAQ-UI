@@ -1213,7 +1213,7 @@ class ADS8686(SPIController):
 
     # Method to read from the current set channel on the chip
     def read(self, f):
-        d, g  = f.read_pipe_out(data_len = 16)
+        d, g  = f.read_pipe_out(addr_offset = 5, data_len = 16)
         d = self.convert_data(d)
         return d
 
