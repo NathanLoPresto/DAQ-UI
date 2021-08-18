@@ -1221,6 +1221,7 @@ class ADS8686(SPIController):
     # Method to set up the chip
     def setup(self):
         SPI_config()
+        print("ADS8686 configuration done")
 
 
 # Class for the AD7961 Fast ADC. Does not use SPI or I2C.
@@ -1278,7 +1279,7 @@ class AD7961:
         # enable ADC
         #self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
         #self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
-        print ("setup")
+        print ("AD7961 setup done")
     # test composite ADC function that enables, reads, converts and plots
 
     def read(self):

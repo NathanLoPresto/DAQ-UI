@@ -174,13 +174,11 @@ def filemaker():
         json.dump(data, outfile)
 
 class DisplayChip:
-    def __init__(self, chip, number, addr, used, downsample_factor, trig_addr ):
+    def __init__(self, chip, number,  used, downsample_factor):
         self.chip = chip
         self.number = number
-        self.addr = addr
         self.used = used
         self.downsample_factor = downsample_factor
-        self.trig_addr = trig_addr
 
 '''
 This block will contain the writable commands, useful to the UI
@@ -273,8 +271,8 @@ End of command block, main loop to start thread and set wire ins
 if __name__ == "__main__":
     f=config()
 
-    ad7961            = DisplayChip(AD7961(f),  0, 0xA1, False,  1, 0x01)
-    ads8686           = DisplayChip(ADS8686(f), 1,  5,    True,   1, 0x60)
+    ad7961            = DisplayChip(AD7961(f),  0, False,  1)
+    ads8686           = DisplayChip(ADS8686(f), 1, True,   1)
     adc_list          = [ad7961, ads8686]
 
     for x in adc_list:
