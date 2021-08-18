@@ -13,29 +13,24 @@ import h5py
 import sys
 import os
 
-#These will eventually be taken from top-down file
+#File locations determined by the user, bitfile can be changed
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
 bitfile_used      = 'bitfile.bit'
 
-#Pipe address list needs to be finalized and put into SDWrite
+#Times and dates are set at the start of the experiment
 start_time        = time.time()
 now               = datetime.datetime.now()
 current_time      = now.strftime("%H_%M_%S")
-pipe_addr_list    = [0x80, 0x80]
+pipe_addr         = 0x80
 data_set          = []
 clock_divs        = []
 clock_divider     = []
 user_scaling      = []
 notes             = []
 adc_list          = []
-
 SAMPLE_SIZE       = (524288)
 BLOCK_SIZE        = (16384)
-WRITE_SIZE        = (8*1024*1024)
-TRANSFER_LENGTH   = (4096)
-G_NMEMSIZE        = (8*1024*1024)
-V_SCALING         = (152.6e-6)
 
 #makes the dataset scalable, needs to be called by main
 def create_dataset():
@@ -103,7 +98,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
-    #Eventual call to IsTriggered()
+    #Called by each mainwindow object by QTimer()
     def update_plot_data(self):
         if (adc_list[self.chan].used):
             d = adc_list[self.chan].chip.read(f)
@@ -186,13 +181,13 @@ This block will contain the writable commands, useful to the UI
 
 #Writes a single flat voltage to the DDR3
 def write_flat_voltage(voltage):
-    writeSDRAM(make_flat_voltage(voltage), 0x80)
+    writeSDRAM(make_flat_voltage(voltage), pipe_addr)
     note = ("Flat voltage of voltage ", voltage, " written to the DDR3")
     add_note(note)
     
 #Writes a single period of a sin wave to the DDR3
 def write_sin_wave(voltage):
-    writeSDRAM(make_sin_wave(voltage), 0x80)
+    writeSDRAM(make_sin_wave(voltage), pipe_addr)
     note = ("Sin wave of voltage ", voltage, " written to the DDR3")
     add_note(note)
 
