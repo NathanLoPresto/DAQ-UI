@@ -14,6 +14,7 @@ import pandas as pd
 import os
 import sys
 from utils import *
+from XEM7310SpiScript import SPI_config
 
 # Class for registers to be used within chips and the SPI core. Contains the register's hex address, default value, bit index, and bit width.
 class Register:
@@ -1219,7 +1220,7 @@ class ADS8686(SPIController):
 
     # Method to set up the chip
     def setup(self):
-        print("The ADS8686 is being setup")
+        SPI_config()
 
 
 # Class for the AD7961 Fast ADC. Does not use SPI or I2C.

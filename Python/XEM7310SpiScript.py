@@ -81,20 +81,7 @@ msg_w = 0x8000 # This is used to tell the ADS8686 board that we are going to wri
 
 ################ Handles configuration, reading, and writing data to/from the chip via SPI ###################
 def SPI_config():
-    ''' First sets triggers to listen to host(python) commands, resets the clk divider and fifo, and resets the fpga. Then
-    it configures the SPI controller by setting the clock divider, control register, and ss
-    register. ONLY RUN 1x to avoid improper configuration! '''
-    
-    # first: reset fpga, fifo, spi controller clk_divider, and set to listen to host commands
-    # f.xem.ActivateTriggerIn(0x40, 1)    # resets the fpga
 
-    # write to the register bridge to setup the device (okRegBridge needs an addr and the value to send to the clk)
-    # f.xem.WriteRegister(0, 6) # pass in the address (0) and value to divide the clk (must be a multiple of 2)   
-    # f.xem.ActivateTriggerIn(0x40, 11) # tell the wb to start the data transmission process
-
-    # f.xem.ActivateTriggerIn(0x40, 10)   # resets the spi controller clock divider
-    # f.xem.ActivateTriggerIn(0x40, 2)    # empties the fifo for the ads8686
-    # f.xem.ActivateTriggerIn(0x40, 11)   # initiates host wishbone and SPI transactions
     f.set_wire(1, 1, 0xFFFF)              # sets the wire for spi_driver so the host is driving commands
 
     for val in [wb_r | divreg_addr, wb_w | clk_div, # divider (need to look into settings of 1 and 2 didn't show 16 clock cycles) 
