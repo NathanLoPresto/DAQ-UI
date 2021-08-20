@@ -34,6 +34,16 @@ The applications of this project extend deep into the electrophysiology communit
 
 Both data coming into the host computer from the ADCs and waveforms written to the DDR3 SDRAM rely on the FrontPanel API's read/write functions. These functions bridge the gap between the Python script and the HDL, and provide fast and reliable transfers between the FPGA and the host computer. By testing the speed of read/write with different transfer lengths, conclusively, the best transfer lengths for the script could be chosen. With multiple tests and a relatively seamless process, results were conclusive and clear that FIFO transfer sizes closest to 16kB yielded that fastest transfer speed.
 
+| Read/Write    | Test Number | 512 | 1024 | 2048 | 4096 | 8192 | 16384 |
+|---------------|-------------|-----|------|------|------|------|-------|
+| Read          | 1           | 97  | 114  | 163  | 187  | 220  | 225   |
+| Read          | 2           | 92  | 117  | 163  | 199  | 213  | 224   |
+| Read          | 3           | 92  | 126  | 160  | 190  | 211  | 222   |
+| Write         | 1           | 177 | 226  | 262  | 244  | 245  | 248   |
+| Write         | 2           | 209 | 186  | 279  | 259  | 259  | 277   |
+| Write         | 3           | 224 | 250  | 189  | 271  | 241  | 234   |
+| Average read  | 1           | 93  | 119  | 162  | 192  | 214  | 223   |
+| Average write | 1           | 203 | 220  | 243  | 258  | 248  | 253   |
 
 ## Speed test(Window Updates)
 
