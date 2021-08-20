@@ -14,7 +14,7 @@ import os
 import sys
 import time
 from collections import namedtuple
-
+from utils import gen_mask, test_bit, twos_comp
 
 Register = namedtuple('Register', 'address, default, bit_index_high, bit_index_low, bit_width')
 
