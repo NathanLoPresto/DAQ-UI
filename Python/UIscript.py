@@ -16,7 +16,7 @@ import os
 #File locations determined by the user, bitfile can be changed
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
-bitfile_used      = 'counterfile.bit'
+bitfile_used      = 'bitfile.bit'
 
 #Times and dates are set at the start of the experiment
 start_time        = time.time()
@@ -36,7 +36,7 @@ BLOCK_SIZE        = (16384)
 def create_dataset():
     for x in range (len(adc_list)):
         data_set.append([])
-        clock_divs.append(10)
+        clock_divs.append(1)
         clock_divider.append(0)
         user_scaling.append(1)
 
@@ -103,6 +103,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if (adc_list[self.chan].used):
             #d = adc_list[self.chan].chip.read(f)
             d=5
+            time_of_read = 2
             time_of_read = f.get_time()
             data_set[self.chan].append([d, time_of_read])
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
@@ -130,7 +131,7 @@ def writeSDRAM(g_buf, address):
     if (r>0):
         print("Write was a success")
     else:
-        print ("Write was a failure")
+        print ("Write was a failure", r)
     #below sets the HDL into read mode
     f.set_wire(0x03, 4)
     f.set_wire(0x03, 0)

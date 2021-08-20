@@ -58,7 +58,7 @@ class FPGA:
 
         self.bitfile = bitfile
         self.i2c = {'m_pBuf': [], 'm_nDataStart': 7}
-        self.pll = ok.PLL22150()
+        #self.pll = ok.PLL22150()
         return
 
     def init_device(self):
