@@ -102,7 +102,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_plot_data(self):
         if (adc_list[self.chan].used):
             d = adc_list[self.chan].chip.read(f)
-            data_set[self.chan].append(d)
+            time_of_read = time.perf_counter()
+            data_set[self.chan].append([d, time_of_read])
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             global clock_divider
             global user_scaling
@@ -269,7 +270,6 @@ if __name__ == "__main__":
     ad7961            = DisplayChip(AD7961(f),  0, False,  1)
     ads8686           = DisplayChip(ADS8686(f), 1, True,   1)
     adc_list          = [ad7961, ads8686]
-
     for x in adc_list:
         if(x.used):
             x.chip.setup()

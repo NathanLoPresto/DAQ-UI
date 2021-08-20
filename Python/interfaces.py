@@ -1220,7 +1220,7 @@ class ADS8686(SPIController):
 
     # Method to set up the chip
     def setup(self):
-        SPI_config()
+        #SPI_config()
         print("ADS8686 configuration done")
 
 
