@@ -274,7 +274,7 @@ if __name__ == "__main__":
     for x in adc_list:
         if(x.used):
             x.chip.setup()
-
+    print("hello")
     create_dataset()
     GRAPHING_THREAD = threading.Thread(target=main_loop)
     GRAPHING_THREAD.start()
