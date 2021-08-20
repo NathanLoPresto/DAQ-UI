@@ -2,7 +2,7 @@ from interfaces import AD7961, ADS8686
 from PyQt5 import QtWidgets, QtCore
 from scipy import signal
 import pyqtgraph as pg
-from fpga import FPGA
+from interfaces import FPGA
 import numpy as np
 import threading
 import datetime
@@ -16,7 +16,7 @@ import os
 #File locations determined by the user, bitfile can be changed
 save_hdf5         = 'C:/Users/nalo1/Downloads/HDF5'
 save_json         = 'C:/Users/nalo1/Downloads/Metadata'
-bitfile_used      = 'bitfile.bit'
+bitfile_used      = 'counterfile.bit'
 
 #Times and dates are set at the start of the experiment
 start_time        = time.time()
@@ -101,8 +101,9 @@ class MainWindow(QtWidgets.QMainWindow):
     #Called by each mainwindow object by QTimer()
     def update_plot_data(self):
         if (adc_list[self.chan].used):
-            d = adc_list[self.chan].chip.read(f)
-            time_of_read = time.perf_counter()
+            #d = adc_list[self.chan].chip.read(f)
+            d=5
+            time_of_read = f.get_time()
             data_set[self.chan].append([d, time_of_read])
             #d = signal.decimate(d, adc_list[self.chan].downsample_factor)
             global clock_divider

@@ -1,52 +1,60 @@
-  
 """
-Python script for configuring OpalKelly XEM7310
-and use it as an I2C controller.
+Python module for configuring OpalKelly XEM7310
+and use it as an I2C controller, SPI controller, and Serial LVDS controller.
 Much of the Python is no longer used as the FPGA code is simpler than previously.
 Functions no longer in use include SHUF (shuffling) and multiple and/or timed reads.
-May 2021
+August 2021
 Lucas Koerner, koer2434@stthomas.edu
+Abe Stroschein, ajstroschein@stthomas.edu
 """
 import ok
-import time
 import numpy as np
 import pandas as pd
 import os
 import sys
-from utils import *
-from XEM7310SpiScript import SPI_config
+import time
+from collections import namedtuple
 
-# Class for registers to be used within chips and the SPI core. Contains the register's hex address, default value, bit index, and bit width.
-class Register:
-    spreadsheet_path = os.path.join(os.getcwd(), "Registers.xlsx")
-    # The Registers spreadsheet is located in the covg_fpga folder so we need to find that folder. If it is not above the current directory, the program fails.
 
-    def __init__(self, address, default, bit_width, bit_index_high, bit_index_low):
-        self.address = address
-        self.default = default
-        self.bit_index_high = bit_index_high
-        self.bit_index_low = bit_index_low
-        self.bit_width = bit_width
+Register = namedtuple('Register', 'address, default, bit_index_high, bit_index_low, bit_width')
 
-    @classmethod
-    def dict_from_excel(cls, sheet, workbook=spreadsheet_path):
-        reg_dict = {}
-        sheet_data = pd.read_excel(workbook, sheet)
-        for row in range(len(sheet_data)):
-            row_data = sheet_data.iloc[row]
-            reg_dict[row_data['Name']] = Register(
-                address=int(row_data['Hex Address'], 16),
-                default=int(row_data['Default Value'], 16),
-                bit_width=int(row_data['Bit Width']),
-                bit_index_high=(None if row_data['Bit Index (High)'] == 'None' else int(
-                    row_data['Bit Index (High)'])),  # Bit Index of None means the register takes up the whole endpoint
-                bit_index_low=(None if row_data['Bit Index (Low)'] == 'None' else int(row_data['Bit Index (Low)'])))
-        return reg_dict
+def registers_from_excel(sheet, workbook_path='Registers.xlsx'):
+    """Return a dictionary of Registers from an page in an Excel spreadsheet."""
+
+    if workbook_path == None:
+        workbook_path = os.getcwd()
+        # The Registers spreadsheet is located in the covg_fpga folder so we need to find that folder. If it is not above the current directory, the program fails.
+        for i in range(15):
+            if os.path.basename(workbook_path) == 'covg_fpga':
+                workbook_path = os.path.join(workbook_path, 'Registers.xlsx')
+                break
+            else:
+                # If we aren't in covg_fpga, move up a folder and check again
+                workbook_path = os.path.dirname(workbook_path)
+            
+    reg_dict = {}
+    sheet_data = pd.read_excel(workbook_path, sheet)
+    for row in range(len(sheet_data)):
+        row_data = sheet_data.iloc[row]
+        reg_dict[row_data['Name']] = Register(
+            address=int(row_data['Hex Address'], 16),
+            default=int(row_data['Default Value'], 16),
+            bit_width=int(row_data['Bit Width']),
+            bit_index_high=(None if row_data['Bit Index (High)'] == 'None' else int(
+                row_data['Bit Index (High)'])),  # Bit Index of None means the register takes up the whole endpoint
+            bit_index_low=(None if row_data['Bit Index (Low)'] == 'None' else int(row_data['Bit Index (Low)'])))
+    return reg_dict
+
+Endpoint = namedtuple('Endpoint', 'address, bit_index_high, bit_index_low, bit_width')
+
+def endpoints_from_defines(chip_name, ep_defines_path):
+    """Return a dictionary of Endpoints for a chip in ep_defines.v."""
+    pass
 
 # Class for the FPGA itself. Handles FPGA configuration, setting wire values, and other FPGA specific functions.
 class FPGA:
     # TODO: change to complete bitfile when Verilog is combined
-    def __init__(self, bitfile='bitfile.bit'):
+    def __init__(self, bitfile='counterfile.bit'):
 
         self.bitfile = bitfile
         self.i2c = {'m_pBuf': [], 'm_nDataStart': 7}
@@ -156,71 +164,28 @@ class FPGA:
         self.xem.UpdateWireIns()
 
     def send_trig(self, ep_bit):
-        ''' 
-            expects a single bit, not yet implement for list of bits 
         '''
-        self.xem.ActivateTriggerIn(ep_bit.address, list(
-            range(ep_bit.bit_index_low, ep_bit.bit_index_high + 1)))
+            expects a single bit, not yet implement for list of bits
+        '''
+        self.xem.ActivateTriggerIn(ep_bit.address, ep_bit.bit_index_low)
 
     def read_ep(self, ep_bit):
         self.xem.UpdateWireOuts()
         read_out = self.xem.GetWireOutValue(ep_bit.address)
         return read_out
 
-    def infile(self, infile, outfile):
-        # RAM test
-        fileIn = open(infile, "rb")
-        fileOut = open(outfile, "wb")
-
-        # Reset the RAM address pointer.
-        self.xem.ActivateTriggerIn(0x41, 0)
-
-        while fileIn:
-            buf = bytearray(fileIn.read(2048))
-
-            got = len(buf)
-            if (got == 0):
-                break
-
-            if (got < 2048):
-                buf += b"\x00"*(2048-got)
-
-            # Write a block of data.
-            self.xem.ActivateTriggerIn(0x41, 0)
-            self.xem.WriteToPipeIn(0x80, buf)
-
-            # Perform DES on the block.
-            self.xem.ActivateTriggerIn(0x40, 0)
-
-            # Wait for the TriggerOut indicating DONE.
-            for i in range(100):
-                self.xem.UpdateTriggerOuts()
-                if (self.xem.IsTriggered(0x60, 1)):
-                    break
-
-            self.xem.ReadFromPipeOut(0xa0, buf)
-            fileOut.write(buf)
-
-        fileIn.close()
-        fileOut.close()
-
     def get_pll_freq(self, output):
         f = self.pll.GetOutputFrequency(output)
         print('Pll f = {} [MHz]'.format(f))
         return f
-
-    def read_sensors(self):
-        '''
-        https://opalkelly.com/examples/device-sensors-api/#tab-python
-        '''
-        sensors = self.xem.GetDeviceSensors()
-
-        # Retrieve individual sensors using index values
-        for s in sensors:
-            print('Sensor name = {}; value = {}'.format(s.name,
-                                                        s.value))
-
-        return sensors
+    
+    def get_time(self):
+        self.send_trig(Endpoint(0x40, 10, 10, 1))
+        low_end = self.read_wire(0x25)
+        high_end = self.read_wire(0x26)
+        total_time =  (high_end<<32| low_end)
+        total_time/=200000000
+        return total_time
 
 # Class for controllers on the FPGA using I2C protocol. Handles configuration, reading, writing, and reset.
 # Requires First.bit file for FPGA.
@@ -239,7 +204,7 @@ class I2CController:
     )
 
     # Add the registers from the Excel file to the parameters
-    reg_dict = Register.dict_from_excel('I2C')
+    reg_dict = registers_from_excel('I2C')
     DEFAULT_PARAMETERS.update(reg_dict)
 
     def __init__(self, fpga, parameters=DEFAULT_PARAMETERS, i2c={'m_pBuf': [], 'm_nDataStart': 7}):
@@ -425,7 +390,7 @@ class IOExpanderController(I2CController):
     ))
 
     # Add the registers from the Excel file to the parameters
-    reg_dict = Register.dict_from_excel('IOExpander')
+    reg_dict = registers_from_excel('IOExpander')
     DEFAULT_PARAMETERS.update(reg_dict)
 
     def __init__(self, fpga, parameters=DEFAULT_PARAMETERS):
@@ -473,7 +438,7 @@ class IDChipController(I2CController):
     DEFAULT_PARAMETERS.update(dict(
         ADDRESS_HEADER=0b10100000
     ))
-    reg_dict = Register.dict_from_excel('24AA025UID')
+    reg_dict = registers_from_excel('24AA025UID')
     DEFAULT_PARAMETERS.update(reg_dict)
 
     def __init__(self, fpga, parameters=DEFAULT_PARAMETERS):
@@ -522,7 +487,7 @@ class IDChipController(I2CController):
 # Class for the I2C DAC chip DAC53401. Handles reading, writing, and configuration. This is a child class of the parent I2CController class.
 class I2CDACController(I2CController):
     DEFAULT_PARAMETERS = dict(I2CController.DEFAULT_PARAMETERS)
-    reg_dict = Register.dict_from_excel('DAC53401')
+    reg_dict = registers_from_excel('DAC53401')
     DEFAULT_PARAMETERS.update(reg_dict)
     DEFAULT_PARAMETERS['ADDRESS_HEADER'] = 0b10010000
 
@@ -552,16 +517,13 @@ class I2CDACController(I2CController):
         if read_out == None:
             print('Read for masking FAILED')
             return False
-        current_data = 0
-        for byte in read_out:
-            current_data <<= 8
-            current_data |= byte
-        new_data = (data & mask) | (current_data & ~mask)
+        new_data = (data & mask) | (read_out & ~mask)
 
         # Turn data into a list of bytes for i2c_write method
         # Essentially round up to the closest byte
-        number_of_bytes = (register.bit_width + 7) // 8
-        list_data = I2CController.int_to_list(new_data)
+        #number_of_bytes = (register.bit_width + 7) // 8
+        list_data = int_to_list(new_data)
+        number_of_bytes = len(list_data)
         self.i2c_write_long(
             dev_addr, [register.address], number_of_bytes, list_data)
 
@@ -737,31 +699,23 @@ class I2CDACController(I2CController):
 # Requires top_level_module.bit file for FPGA.
 class SPIController:
     DEFAULT_PARAMETERS = dict(
-        WB_SET_ADDRESS=0x80000000,  # These 3 are from the SPI core manual
-        WB_WRITE=0x40000000,
-        WB_READ=0x00000000,
-        ACK=0x200000000,
-
-        CTRL_BITS=dict(
-            ASS=0b10000000000000,
-            IE=0b01000000000000,
-            LSB=0b00100000000000,
-            Tx_NEG=0b00010000000000,
-            Rx_NEG=0b00001000000000,
-            CHAR_LEN=0b00000001111111
-        )
+        WB_SET_ADDRESS = 0x80000000,  # These 3 are from the SPI core manual
+        WB_WRITE       = 0x40000000,
+        WB_READ        = 0x00000000,
+        ACK            = 0x200000000,
+        WB_CLK_FREQ    = 200, # clk_sys = 200 MHz in the top_level_module.v comments
     )
 
     # Add the registers from the Excel file to the parameters
-    reg_dict = Register.dict_from_excel('SPI')
+    reg_dict = registers_from_excel('SPI')
     DEFAULT_PARAMETERS.update(reg_dict)
 
     WB_1_PARAMETERS = dict(DEFAULT_PARAMETERS)
-    reg_dict_WB_1 = Register.dict_from_excel('SPI_WB_1')
+    reg_dict_WB_1 = registers_from_excel('SPI_WB_1')
     WB_1_PARAMETERS.update(reg_dict_WB_1)
 
     WB_2_PARAMETERS = dict(DEFAULT_PARAMETERS)
-    reg_dict_WB_2 = Register.dict_from_excel('SPI_WB_2')
+    reg_dict_WB_2 = registers_from_excel('SPI_WB_2')
     WB_2_PARAMETERS.update(reg_dict_WB_2)
 
     def __init__(self, fpga, master_config=DEFAULT_PARAMETERS.get('CTRL').default, parameters=DEFAULT_PARAMETERS, debug=False):
@@ -813,7 +767,7 @@ class SPIController:
         #         print(f'Set address to "CTRL": FAIL')
         #     return False
 
-        busy = self.master_config | 0x0100 # Use or so we do not overwrite the CTRL configuration, just the GO_BSY bit
+        busy = self.master_config | (0x1 << self.parameters['GO_BSY'].bit_index_low) # Use or so we do not overwrite the CTRL configuration, just the GO_BSY bit
         ack = self.wb_write(busy) # add mask or something to not reset entire CTRL register
         # TODO: fix ack
         # if ack:
@@ -840,9 +794,10 @@ class SPIController:
         self.wb_set_address(self.parameters['DIVIDER'].address)
         self.wb_write(divider)
 
-    # Method to set the DIVIDER register according to the input target frequency
+    # Method to set the DIVIDER register according to the input target frequency in MHz
     def set_frequency(self, frequency):
-        divider = round((2*self.parameters['WB_CLK'])/frequency) - 1
+        divider = max(round((self.parameters['WB_CLK_FREQ'])/(frequency * 2)), 1) - 1
+        divider = min(divider, 0xffff_ffff) # Make sure divider does not exceed 32 bits
         self.set_divider(divider)
         return divider
 
@@ -891,54 +846,28 @@ class SPIController:
         return self.wb_read()
 
     # Method to set the CTRL register using binary
-    def configure_master_bin(self, data, mask=0xffff):
+    def configure_master_bin(self, data):
         self.wb_set_address(self.parameters['CTRL'].address)
-        self.fpga.set_wire(self.parameters['WB_IN'].address, data, mask)
-        # DEBUG: for DAC test file
-        # print(f'ActivateTriggerIn(address={hex(self.parameters["WB_CONVERT_TRIGGER"].address)}, index={hex(self.parameters["WB_CONVERT_TRIGGER"].bit_index_high)}')
-        self.fpga.xem.ActivateTriggerIn(
-            self.parameters['WB_CONVERT_TRIGGER'].address, self.parameters['WB_CONVERT_TRIGGER'].bit_index_high)  # High and low bit indexes are the same for the trigger because it is 1 bit wide
-        response = self.fpga.read_wire(self.parameters['WB_OUT'].address)
-        # if response == self.parameters['ACK']:
-        #     ack = True
-        # else:
-        #     ack = False
-        # print(f'Acknowledged: {ack}')
-
-        # Set the configuration in variable so .wb_go() can operate without overwriting the configuration
+        self.wb_write(data)
         self.master_config = data
 
     # Method to set the CTRL register using several arguments
-    def configure_master(self, ASS=None, IE=None, LSB=None, Tx_NEG=None, Rx_NEG=None, CHAR_LEN=None):
-        params = [ASS, IE, LSB, Tx_NEG, Rx_NEG, CHAR_LEN]
-        mask = ''
-        for bit in range(len(params)-1):
-            if params[bit] == None:
-                mask += '0'
-                params[bit] = 0
-            else:
-                mask += '1'
-        mask += '0'  # Reserved bit
-        if CHAR_LEN == None:  # CHAR_LEN is 7 bits rather than 1, so its portion of the mask goes outside the loop
-            mask += '0000000'
-        else:
-            mask += '1111111'
-        mask = int(mask, 2)
+    def configure_master(self, ASS=0, IE=0, LSB=0, Tx_NEG=0, Rx_NEG=0, CHAR_LEN=0):
+        params = {'ASS': ASS, 'IE': IE, 'LSB': LSB, 'Tx_NEG': Tx_NEG, 'Rx_NEG': Rx_NEG, 'CHAR_LEN': CHAR_LEN}
 
-        configuration = 0x00000000 + params[0] * \
-            2**(13) + params[1]*2**(12) + params[2]*2**(11) + \
-            params[3]*2**(10) + params[4]*2**(9) + params[5]
-        self.configure_master_bin(configuration, mask)
+        configuration = self.parameters['CTRL'].default
+        for param in params:
+            configuration |= (params[param] << self.parameters[param].bit_index_low)
+        self.configure_master_bin(configuration)
 
     # Method to get the current configuration of the non-reserved CTRL register bits in a dictionary
     # Includes ASS, IO, LSB, Tx_NEG, Rx_NEG, CHAR_LEN
     def get_master_configuration(self):
-        config = {}
         self.wb_set_address(self.parameters['CTRL'].address)
         config_data = self.wb_read()
-        for bit in self.parameters['CTRL_BITS']:
-            config[bit] = bool(self.parameters['CTRL_BITS'][bit] & config_data)
-        return config
+        #TODO: convert to text data to show individual settings
+        # return config
+        return config_data
 
     # Method to reset the Wishbone Master and SPI Core
     def reset_master(self):
@@ -954,8 +883,8 @@ class DAC80508(SPIController):
     ))
 
     # Get registers from spreadsheet
-    reg_dict = Register.dict_from_excel('DAC80508')
-    config_dict = Register.dict_from_excel('DAC80508_CONFIG')
+    reg_dict = registers_from_excel('DAC80508')
+    config_dict = registers_from_excel('DAC80508_CONFIG')
     DEFAULT_PARAMETERS.update(reg_dict)
     DEFAULT_PARAMETERS.update(dict(CONFIG_DICT=config_dict))
 
@@ -1094,7 +1023,7 @@ class DAC80508(SPIController):
 
 class AD5453(SPIController):
     DEFAULT_PARAMETERS = dict(SPIController.DEFAULT_PARAMETERS)
-    DEFAULT_PARAMETERS.update(Register.dict_from_excel('AD5453'))
+    DEFAULT_PARAMETERS.update(registers_from_excel('AD5453'))
     DEFAULT_PARAMETERS.update(dict(
         bits = 12,
         vref = 2.5*2
@@ -1103,13 +1032,7 @@ class AD5453(SPIController):
     def __init__(self, fpga, master_config=0x3010, parameters=DEFAULT_PARAMETERS, debug=False):
         # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
         super().__init__(fpga, master_config=master_config, parameters=parameters, debug=debug)
-
-    # TODO: remove this?
-    # def to_voltage(self, a):
-    #     masked = a & 0xfff  # 12 bit ADC
-    #     v = masked/(2**self.parameters('bits') - 1)*self.parameters('vref')
-    #     chan = (a & 0xf000) >> 12
-    #     return v, chan
+        self.clk_edge_bits = 0b00 # Default to clocking data into the shift register on the falling edge of the clock
 
     def send_val(self, to_send):
         # now send SPI command
@@ -1121,19 +1044,19 @@ class AD5453(SPIController):
             self.fpga.set_wire(self.parameters['control'].address, val, mask=0xffffffff)
             self.fpga.send_trig(self.parameters['valid'])
 
-    # Method to write 14 bits of data with the option to clock data on the rising edge of the clock rather than the default falling edge of the clock.
-    def write(self, data, clk_data_rising_edge=False):
-        if clk_data_rising_edge:
-            prefix = 0x11 << 14
-        else:
-            prefix = 0x00 << 14
+    # Method to set the control bits of the signals we write to use the rising edge of the clock rather than the default falling edge
+    # To return to the falling edge, the chip requires a power cycle (turn it off and back on)
+    def set_clk_rising_edge(self):
+        self.clk_edge_bits = 0b11
 
-        self.write(prefix | data)
+    # Method to write 14 bits of data with the option to clock data on the rising edge of the clock rather than the default falling edge of the clock.
+    def write(self, data):
+        super().write(self.clk_edge_bits | data)
 
 
 class ADS7952(SPIController):
     DEFAULT_PARAMETERS = dict(SPIController.DEFAULT_PARAMETERS)
-    DEFAULT_PARAMETERS.update(Register.dict_from_excel('ADS7952'))
+    DEFAULT_PARAMETERS.update(registers_from_excel('ADS7952'))
 
     def __init__(self, fpga, master_config=0x3010, parameters=DEFAULT_PARAMETERS, debug=False):
         # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
@@ -1142,8 +1065,8 @@ class ADS7952(SPIController):
 
     def to_voltage(self, a):
         bits = 12
-        vref = 2.5*2 
-        masked = a & 0xfff  # 12 bit ADC        
+        vref = 2.5*2
+        masked = a & 0xfff  # 12 bit ADC
         v = masked/(2**bits - 1)*vref
         chan = (a & 0xf000) >> 12
         return v, chan
@@ -1190,7 +1113,7 @@ class ADS7952(SPIController):
 # Class for the ADS8686 ADC chip.
 class ADS8686(SPIController):
     DEFAULT_PARAMETERS = dict(SPIController.DEFAULT_PARAMETERS)
-    DEFAULT_PARAMETERS.update(Register.dict_from_excel('ADS8686'))
+    DEFAULT_PARAMETERS.update(registers_from_excel('ADS8686'))
 
     def __init__(self, fpga, master_config=0x3010, parameters=DEFAULT_PARAMETERS, debug=False):
         # master_config=0x3010 Sets CHAR_LEN=16, ASS, IE
@@ -1201,27 +1124,13 @@ class ADS8686(SPIController):
     def read_channel(self, channel):
         pass # TODO: write method
 
-    def convert_data(self, buf):
-        bits = 16 # for AD7961 
-        # bits=18 for AD7960
-        d = np.frombuffer(buf, dtype=np.uint16).astype(np.uint32)
-        if bits == 16:
-            d2 = d[0::4] + (d[1::4] << 8)
-        elif bits == 18: 
-            d2 = (d[3::4]<<8) + d[1::4] + ((d[0::4]<<16) & 0x03)
-        d_twos = twos_comp(d2, bits)
-        return d_twos
-
     # Method to read from the current set channel on the chip
-    def read(self, f):
-        d, g  = f.read_pipe_out(addr_offset = 5, data_len = 16)
-        d = self.convert_data(d)
-        return d
+    def read(self):
+        self.read_channel(self.channel)
 
     # Method to set up the chip
     def setup(self):
-        #SPI_config()
-        print("ADS8686 configuration done")
+        pass # TODO: write method
 
 
 # Class for the AD7961 Fast ADC. Does not use SPI or I2C.
@@ -1229,18 +1138,18 @@ class AD7961:
     DEFAULT_PARAMETERS = {
         'adc_chan' : 0
     }
-    DEFAULT_PARAMETERS.update(Register.dict_from_excel('AD7961'))
+    DEFAULT_PARAMETERS.update(registers_from_excel('AD7961'))
 
     def __init__(self, fpga, parameters=DEFAULT_PARAMETERS):
         self.fpga = fpga
         self.parameters = parameters
 
     def get_status(self, fpga):
-        ''' 
+        '''
         adc_pll_lock =   ep(0x20, 8, 'wo')
         adc_fifo_full =  ep(0x20, 9, 'wo')
         adc_fifo_empty = ep(0x20, 10, 'wo')
-        pipe_out_rd_cnt = ep(0x20, [i+11 for i in range(10)], 'wo') # 10 bits 
+        pipe_out_rd_cnt = ep(0x20, [i+11 for i in range(10)], 'wo') # 10 bits
         '''
         fpga.xem.UpdateWireOuts()
         a = fpga.xem.GetWireOutValue(self.parameters.get('adc_pll_lock').addr)
@@ -1271,19 +1180,19 @@ class AD7961:
 
 
     def setup(self):
-        # reset PLL 
-        #self.fpga.toggle_high(self.parameters.get('adc_pll_reset'))
-        #self.fpga.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        # reset PLL
+        self.fpga.toggle_high(self.parameters.get('adc_pll_reset'))
+        self.fpga.clear_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
         # reset FIFO
-        #self.fpga.toggle_high(self.parameters.get('adc_fifo_reset'))
+        self.fpga.toggle_high(self.parameters.get('adc_fifo_reset'))
         # enable ADC
-        #self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
-        #self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
-        print ("AD7961 setup done")
+        self.fpga.set_bit(self.parameters.get('adc_reset'), adc_chan = self.parameters.get('adc_chan'))
+        self.fpga.set_bit(self.parameters.get('adc_en0'), adc_chan = self.parameters.get('adc_chan'))
+
     # test composite ADC function that enables, reads, converts and plots
 
     def read(self):
-        s, e = self.fpga.read_pipe_out(addr_offset=0)
+        s, e = self.fpga.read_pipe_out(addr_offset=1)
         data = self.convert_data(s)
         return data
 
@@ -1321,7 +1230,7 @@ def int_to_list(integer):
     list_int = []
 
     while integer != 0:
-        # Take the least significant byte and store it at the front of the list, then shift the integer right 1 byte.
+        # Take the least significant byte and append it to the list, then shift the integer right 1 byte.
         byte = integer % 2**(8)
         list_int.append(byte)
         integer >>= 8
@@ -1336,5 +1245,5 @@ def int_to_list(integer):
 if __name__ == '__main__':
     f = FPGA()
     f.init_device()  # load the bitstream to the FPGA and initialize
-    
+
     dut = AD7961(f)
