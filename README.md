@@ -49,6 +49,15 @@ Both data coming into the host computer from the ADCs and waveforms written to t
 
 While pulling data from high speed ADCs (around 5 MSPS), the graphing software is not going to keep up. The graphing software used, PyQt's graphing package, cam only update around 200 times per second and down to 40 if all of the graphing windows are instantiated. From these numbers, a downsampling factor could be applied to the data going into the graphing windows. For every 25,000 points going into the HDF5 file, only 1 would be displayed on the graphing widnow. Any more, and the data would be lost anyways. 
 
+| Number of Channels  | Seconds | Samples | Samples/sec | 
+|---------------------|---------|---------|-------------|
+| 6                   | 20.39   | 1000    | 50          | 
+| 4                   | 14.38   | 1000    | 69          | 
+| 3                   | 10.01   | 1000    | 100         | 
+| 2                   | 7.19    | 1000    | 139         | 
+| 1                   | 5.24    | 1000    | 190         |
+
+
 
 ## Future
 
