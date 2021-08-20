@@ -169,6 +169,7 @@ def filemaker():
     with open (json_name, 'w') as outfile:
         json.dump(data, outfile)
 
+#Object creation for each chip, look at interfaces.py for more reference
 class DisplayChip:
     def __init__(self, chip, number,  used, downsample_factor):
         self.chip = chip
@@ -206,14 +207,14 @@ def change_clock():
     print("Clocking edge changed")
     add_note("SPI clockedge changed")
 
-#changes the scaling of the outputs
+#Changes the scaling of the outputs
 def change_scaling(scaling, channel):
     global user_scaling
     user_scaling[channel] = scaling
     note = ("Scaling of channel ", channel, " changed to ", scaling)
     add_note(note)
 
-#Given, the graphing channel, pick which channel to stop pulling data and graphing from 
+#Given the graphing channel, pick which channel to stop pulling data and graphing from 
 def stop_ADC(channel):
     adc_list[channel].used = False
     note = ("Channel ", channel, " stopped")
@@ -233,7 +234,7 @@ def change_update_speed(factor, channel):
     note = ("Update speed of channel ", channel, " changed to ", factor)
     add_note(note)
 
-#given a factor and a channel, change the downsampling of the graphing window
+#Given a factor and a channel, change the downsampling of the graphing window
 def downsample_change(factor, channel):
     adc_list[channel].downsample_factor = factor
     note = ("Chanel ", channel, " changed to downsample factor ", factor)
@@ -246,11 +247,11 @@ def all_factors(factor):
     note = ("All factors changed to ", factor)
     add_note(note)
 
-#Given a string, it iwll append it to the notes eventually dumped into the JSON file
+#Given a string, it will append it to the notes eventually dumped into the JSON file
 def add_note(note):
     notes.append(note)
 
-#Given a vaklue, changes the channel of the ads7952
+#Given a value, changes the channel of the given chip
 def chan_select(display_chip, channel):
     if hasattr(display_chip.chip, 'channel'):
         display_chip.chip.channel = channel
