@@ -35,9 +35,6 @@ The applications of this project extend deep into the electrophysiology communit
 Both data coming into the host computer from the ADCs and waveforms written to the DDR3 SDRAM rely on the FrontPanel API's read/write functions. These functions bridge the gap between the Python script and the HDL, and provide fast and reliable transfers between the FPGA and the host computer. By testing the speed of read/write with different transfer lengths, conclusively, the best transfer lengths for the script could be chosen. With multiple tests and a relatively seamless process, results were conclusive and clear that FIFO transfer sizes closest to 16kB yielded that fastest transfer speed.
 
 
-<img src="https://user-images.githubusercontent.com/78660740/127703939-505e441f-8625-467c-a1ab-aa91157dd2dc.png" alt="Speed Testing" width="200"></a>
-
-
 ### Speed test(Window Updates)
 
 While pulling data from high speed ADCs (around 5 MSPS), the graphing software is not going to keep up. The graphing software used, PyQt's graphing package, cam only update around 200 times per second and down to 40 if all of the graphing windows are instantiated. From these numbers, a downsampling factor could be applied to the data going into the graphing windows. For every 25,000 points going into the HDF5 file, only 1 would be displayed on the graphing widnow. Any more, and the data would be lost anyways. 
@@ -62,8 +59,8 @@ details
 
 ## Acknowledgments
 
-[Lucas J. Koerner](https://lucask07.github.io/)
-[University of St. Thomas Engineering Department](https://www.stthomas.edu/engineering/)
-[Undergraduate Research Opportunities Program] (https://www.stthomas.edu/urop/)
-[Young Scholars Grant](https://one.stthomas.edu/sites/undergraduate-research-opportunities-program-urop/SitePage/77799/young-scholars-grants)
+[Lucas J. Koerner](https://lucask07.github.io/) </br>
+[University of St. Thomas Engineering Department](https://www.stthomas.edu/engineering/)</br>
+[Undergraduate Research Opportunities Program](https://www.stthomas.edu/urop/) </br>
+[Young Scholars Grant](https://one.stthomas.edu/sites/undergraduate-research-opportunities-program-urop/SitePage/77799/young-scholars-grants)</br>
 Coresearchers: Corissa, Ian, Abe & Jake
