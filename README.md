@@ -1,8 +1,8 @@
 
 ***
-# UI for Servicing General Purpose Operational Amplifiers
+# UI for Servicing General Purpose Data Acquisition Device
 
-The objective of the project was to create a UI for a general-purpose operational amplifier centered around electrophysiology experimentation. This includes reading data from a host of ADCs, storing the data into hierarchical data formats, displaying the data in real-time graphing windows and assembling components of the project into a single human-runnable script. In tandem with Dr. Koerner’s ongoing project and the electrophysiology department at the University of Richmond, my codebase and overall design would be open-source, making it free and readily usable for the general public.
+The objective of the project was to create a UI for a general-purpose data acquisition device centered around electrophysiology experimentation. This includes reading data from a host of ADCs, storing the data into hierarchical data formats, displaying the data in real-time graphing windows and assembling components of the project into a single human-runnable script. In tandem with Dr. Koerner’s ongoing project and the electrophysiology department at the University of Richmond, my codebase and overall design would be open-source, making it free and readily usable for the general public.
 
 
 ## Getting Started
@@ -61,7 +61,7 @@ While pulling data from high speed ADCs (around 5 MSPS), the graphing software i
 
 ## Future
 
-While the purpose of the project, designing a UI to facilitate a general purpose operational amplifier, was successful, there is a considerable amount of work left to bring this product to researchers hands. For instance, Dr. Koerner, in the upcoming year(s), is planning to design tests, in correspondence with researchers, to show the OP AMP’s effectiveness in the lab.
+While the purpose of the project, designing a UI to facilitate a general purpose data acquisition device, was successful, there is a considerable amount of work left to bring this product to researchers hands. For instance, Dr. Koerner, in the upcoming year(s), is planning to design tests, in correspondence with researchers, to show the OP AMP’s effectiveness in the lab.
 
 
 ## Authors
