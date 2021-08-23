@@ -61,7 +61,7 @@ While pulling data from high speed ADCs (around 5 MSPS), the graphing software i
 
 ## Future
 
-While the purpose of the project, designing a UI to facilitate a general purpose data acquisition device, was successful, there is a considerable amount of work left to bring this product to researchers hands. For instance, Dr. Koerner, in the upcoming year(s), is planning to design tests, in correspondence with researchers, to show the OP AMP’s effectiveness in the lab.
+While the purpose of the project, designing a UI to facilitate a general purpose data acquisition device, was successful, there is a considerable amount of work left to bring this product to researchers hands. For instance, Dr. Koerner, in the upcoming year(s), is planning to design tests, in correspondence with researchers, to show the DAQ’s effectiveness in the lab.
 
 
 ## Authors
